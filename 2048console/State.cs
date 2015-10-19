@@ -5,6 +5,8 @@ namespace _2048console
     // State class
     public class State
     {
+        private Random random;
+
         private int[][] grid;
         public int[][] Grid
         {
@@ -49,6 +51,20 @@ namespace _2048console
             this.grid = grid;
             this.points = points;
             this.player = turn;
+
+             random = new Random();
+        }
+
+        public State Clone()
+        {
+            return new State(GridHelper.CloneGrid(this.grid), this.points, this.player);
+        }
+
+        public Move GetRandomMove()
+        {
+            List<Move> moves = GetMoves();
+            int randomIndex = random.Next(0, moves.Count);
+            return moves[randomIndex];
         }
 
         public override bool Equals(System.Object obj)
@@ -97,6 +113,13 @@ namespace _2048console
         public override int GetHashCode()
         {
             return grid.GetHashCode() * points;
+        }
+
+        // Used by MCTS (only called for terminal states)
+        public int GetResult()
+        {
+            if (this.IsWin()) return 1;
+            else return 0;
         }
 
         // checks if the state is a winning state (has tile 2048)
