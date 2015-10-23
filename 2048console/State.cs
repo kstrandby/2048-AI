@@ -116,10 +116,9 @@ namespace _2048console
         }
 
         // Used by MCTS (only called for terminal states)
-        public int GetResult()
+        public double GetResult()
         {
-            if (this.IsWin()) return 1;
-            else return 0;
+            return this.Points;
         }
 
         // checks if the state is a winning state (has tile 2048)

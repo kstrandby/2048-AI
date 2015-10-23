@@ -12,6 +12,7 @@ namespace _2048console
 {
     public class Node
     {
+        private State state;
         
         private Move generatingMove; // move that resulted in this node (null for root node)
         public Move GeneratingMove
@@ -37,12 +38,13 @@ namespace _2048console
                 this.parent = value;
             }
         }
-        private int wins, visits;
-        public int Wins
+        private int visits;
+        private double results;
+        public double Results
         {
             get
             {
-                return this.wins;
+                return this.results;
             }
         }
         public int Visits
@@ -81,18 +83,19 @@ namespace _2048console
 
         public Node(Move move, Node parent,  State state)
         {
+            this.state = state;
             this.generatingMove = move;
             this.parent = parent;
-            this.wins = 0;
+            this.results = 0;
             this.visits = 0;
             this.children = new List<Node>();
             this.untriedMoves = state.GetMoves();
         }
 
-        public void Update(int result) // result 1 for win, 0 for lose
+        public void Update(double result) 
         {
             this.visits += 1;
-            this.wins += result; 
+            this.results += result; 
         }
 
         public Node AddChild(Move move, State state)
@@ -103,13 +106,18 @@ namespace _2048console
             return child;
         } 
 
-        public Node SelectChild(double c)
+        public Node SelectChild()
         {
             Node selected = null;
             double best = Double.MinValue;
+
+            int highest = GridHelper.HighestTile(this.state.Grid);
+            if (highest < 256) highest = 256; // assume we can always reach 512
+            double c = MonteCarlo.minPoints[highest * 2];
+
             foreach (Node child in children)
             {
-                double UCT = child.wins / child.visits + 2 * c * Math.Sqrt(2 * Math.Log(this.visits) / child.visits);
+                double UCT = child.results / child.visits + 2 * c * Math.Sqrt(2 * Math.Log(this.visits) / child.visits);
                 if (UCT > best)
                 {
                     selected = child;

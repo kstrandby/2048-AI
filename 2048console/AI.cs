@@ -32,7 +32,7 @@ namespace _2048console
             {
                 double eval = 0;
 
-                eval = 0.1 * Smoothness(state) + Monotonicity(state) + 0.5 * EmptyCells(state) + GridHelper.HighestTile(state.Grid) - 1.5 * IsolationPenalty(state);
+                eval = 0.1 * Smoothness(state) + Monotonicity(state) + 0.5 * EmptyCells(state) + GridHelper.HighestTile(state.Grid); // -1.5 * IsolationPenalty(state);
                 //double snake = WeightSnake(state);
                 //eval = snake - Math.Log(snake) * IsolationPenalty(state);
 
