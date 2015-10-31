@@ -13,68 +13,7 @@ namespace _2048console
     {
         static void Main(string[] args)
         {
-            int[][] grid1 = new int[][] {
-                new int[]{128, 64, 32, 8},
-                new int[]{64,32,16,0},
-                new int[]{32,16,8,0},
-                new int[]{16,8,2,2}
-            };
-            Console.WriteLine(GridHelper.ToString(grid1));
-
-            State state = new State(grid1, 0, 0);
-            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
-
-            int[][] grid2 = new int[][] {
-                new int[]{128, 64, 32, 8},
-                new int[]{64,32,16,0},
-                new int[]{32,16,8,0},
-                new int[]{16,8,2,4}
-            };
-            Console.WriteLine(GridHelper.ToString(grid2));
-            state = new State(grid2, 0, 0);
-
-            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
-
-            int[][] grid3 = new int[][] {
-                new int[]{128, 64, 32, 8},
-                new int[]{64,32,16,4},
-                new int[]{32,16,8,0},
-                new int[]{16,8,2,0}
-            };
-            Console.WriteLine(GridHelper.ToString(grid3));
-            state = new State(grid3, 0, 0);
-            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
-
-            int[][] grid4 = new int[][] {
-                new int[]{128, 64, 32, 8},
-                new int[]{64,32,16,2},
-                new int[]{32,16,8,0},
-                new int[]{16,8,2,0}
-            };
-            Console.WriteLine(GridHelper.ToString(grid4));
-            state = new State(grid4, 0, 0);
-            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
-
-            int[][] grid5 = new int[][] {
-                new int[]{128, 64, 32, 8},
-                new int[]{64,32,16,0},
-                new int[]{32,16,8,2},
-                new int[]{16,8,2,0}
-            };
-            Console.WriteLine(GridHelper.ToString(grid5));
-            state = new State(grid5, 0, 0);
-            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
-
-            int[][] grid6 = new int[][] {
-                new int[]{128, 64, 32, 8},
-                new int[]{64,32,16,0},
-                new int[]{32,16,8,4},
-                new int[]{16,8,2,0}
-            };
-            Console.WriteLine(GridHelper.ToString(grid6));
-            state = state = new State(grid6, 0, 0);
-            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
-
+           
 
             Console.ReadLine();
             Console.WriteLine("Starting game...");
