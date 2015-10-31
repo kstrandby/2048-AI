@@ -111,9 +111,7 @@ namespace _2048console
             Node selected = null;
             double best = Double.MinValue;
 
-            int highest = GridHelper.HighestTile(this.state.Grid);
-            if (highest < 256) highest = 256; // assume we can always reach 512
-            double c = MonteCarlo.minPoints[highest * 2];
+            double c = this.state.Points + 2000;
 
             foreach (Node child in children)
             {

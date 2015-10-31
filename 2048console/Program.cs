@@ -13,6 +13,70 @@ namespace _2048console
     {
         static void Main(string[] args)
         {
+            int[][] grid1 = new int[][] {
+                new int[]{128, 64, 32, 8},
+                new int[]{64,32,16,0},
+                new int[]{32,16,8,0},
+                new int[]{16,8,2,2}
+            };
+            Console.WriteLine(GridHelper.ToString(grid1));
+
+            State state = new State(grid1, 0, 0);
+            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
+
+            int[][] grid2 = new int[][] {
+                new int[]{128, 64, 32, 8},
+                new int[]{64,32,16,0},
+                new int[]{32,16,8,0},
+                new int[]{16,8,2,4}
+            };
+            Console.WriteLine(GridHelper.ToString(grid2));
+            state = new State(grid2, 0, 0);
+
+            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
+
+            int[][] grid3 = new int[][] {
+                new int[]{128, 64, 32, 8},
+                new int[]{64,32,16,4},
+                new int[]{32,16,8,0},
+                new int[]{16,8,2,0}
+            };
+            Console.WriteLine(GridHelper.ToString(grid3));
+            state = new State(grid3, 0, 0);
+            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
+
+            int[][] grid4 = new int[][] {
+                new int[]{128, 64, 32, 8},
+                new int[]{64,32,16,2},
+                new int[]{32,16,8,0},
+                new int[]{16,8,2,0}
+            };
+            Console.WriteLine(GridHelper.ToString(grid4));
+            state = new State(grid4, 0, 0);
+            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
+
+            int[][] grid5 = new int[][] {
+                new int[]{128, 64, 32, 8},
+                new int[]{64,32,16,0},
+                new int[]{32,16,8,2},
+                new int[]{16,8,2,0}
+            };
+            Console.WriteLine(GridHelper.ToString(grid5));
+            state = new State(grid5, 0, 0);
+            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
+
+            int[][] grid6 = new int[][] {
+                new int[]{128, 64, 32, 8},
+                new int[]{64,32,16,0},
+                new int[]{32,16,8,4},
+                new int[]{16,8,2,0}
+            };
+            Console.WriteLine(GridHelper.ToString(grid6));
+            state = state = new State(grid6, 0, 0);
+            Console.WriteLine("AI Evaluate: " + AI.Evaluate(null, state));
+
+
+            Console.ReadLine();
             Console.WriteLine("Starting game...");
             Thread.Sleep(500);
             Console.SetCursorPosition(0, 0);
@@ -77,18 +141,20 @@ namespace _2048console
                 Console.WriteLine("Choose number of simulations: ");
                 int simulations = Convert.ToInt32(Console.ReadLine());
 
-                StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\MCTS.txt", true);
+                StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\MCTS_c=parent.points+2000.txt", true);
                 int num1024 = 0;
                 int num2048 = 0;
                 int num4096 = 0;
                 int num8192 = 0;
+
+                MonteCarlo MCTS = null;
                 for (int i = 0; i < runs; i++)
                 {
                     Console.Write(i + ": ");
                     GameEngine game = new GameEngine();
 
 
-                    MonteCarlo MCTS = new MonteCarlo(game, simulations, 1);
+                    MCTS = new MonteCarlo(game, simulations, 1);
 
                     // timing run
                     var watch = Stopwatch.StartNew();
@@ -130,7 +196,8 @@ namespace _2048console
                 Console.WriteLine("Choose depth: ");
                 int depth = Convert.ToInt32(Console.ReadLine());
 
-                StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\Expectimax_PointsHeuristic.txt", true);
+                StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\Expectimax_NoPruning.txt", true);
+                int num512 = 0;
                 int num1024 = 0;
                 int num2048 = 0;
                 int num4096 = 0;
@@ -153,13 +220,14 @@ namespace _2048console
                     int highestTile = GridHelper.HighestTile(endState.Grid);
                     int points = endState.Points;
                     writer.WriteLine("{0,0}{1,10}{2,15}{3,12}{4,15}", i, depth, highestTile, points, elapsedMs);
+                    if (highestTile >= 512) num512++;
                     if (highestTile >= 1024) num1024++;
                     if (highestTile >= 2048) num2048++;
                     if (highestTile >= 4096) num4096++;
                     if (highestTile >= 8192) num8192++;
                 }
                 writer.Close();
-                Console.WriteLine("1024: " + (double)num1024 / runs * 100 + "%, 2048: " + (double)num2048 / runs * 100 + "%, 4096: " + (double)num4096 / runs * 100 + "%, 8192: " + (double)num8192 / runs * 100 + "%");
+                Console.WriteLine("512: " + (double)num512 / runs * 100 + "%, 1024: " + (double)num1024 / runs * 100 + "%, 2048: " + (double)num2048 / runs * 100 + "%, 4096: " + (double)num4096 / runs * 100 + "%, 8192: " + (double)num8192 / runs * 100 + "%");
                 Console.ReadLine();
             }
             else

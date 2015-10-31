@@ -7,42 +7,76 @@ using System.Threading.Tasks;
 namespace _2048console
 {
 
-    // Static class used to hold method for calculating different heuristics
+    // Static class used for methods to calculate heuristics
     public static class AI
     {
-        private const int WEIGHT_SUM = 16 + 15 + 14 + 13 + 12 + 11 + 10 + 9 + 8 + 7 + 6 + 5 + 4 + 3 + 2 + 1;
+        // Constants
 
-        internal static double GetUpperBound(int highestTile)
+        // upper and lower bounds for heuristics
+        const double upper_smoothness = 0;
+        const double lower_smoothness = -384;
+        const double upper_monotonicity = 0;
+        const double lower_monotonicity = -192;
+        const double upper_emptycells = 15;
+        const double lower_emptycells = 0;
+        const double upper_highestvalue = 17;
+        const double lower_highestvalue = 1;
+
+        // weights
+        const double smoothness_weight = 0.1;
+        const double monotonicity_weight = 1.0;
+        const double emptycells_weight = 0.5;
+        const double highestvalue_weight = 1.0;
+
+        // for Expectimax Star1 pruning
+        // NB: Remember to change this according to the heuristic in use
+        internal static double GetUpperBound()
         {
-            return 15;
+            double bound = smoothness_weight * upper_smoothness + monotonicity_weight * upper_monotonicity + emptycells_weight * upper_emptycells + highestvalue_weight * upper_highestvalue;
+            return bound + 10;
         }
 
-        internal static double GetLowerBound(int highestTile)
+        // for Expectimax Star1 pruning
+        // NB: Remember to change this according to the heuristic in use
+        internal static double GetLowerBound()
         {
-            return -1;
+            double bound = smoothness_weight * lower_smoothness + monotonicity_weight * lower_monotonicity + emptycells_weight * lower_emptycells + highestvalue_weight * lower_highestvalue;
+            return bound - 10;
         }
 
         public static double Evaluate(GameEngine gameEngine, State state)
         {
             if (state.IsGameOver())
             {
-                return -1000;
+                return GetLowerBound();
             }
             else
             {
                 double eval = 0;
 
-                eval = 0.1 * Smoothness(state) + Monotonicity(state) + 0.5 * EmptyCells(state) + GridHelper.HighestTile(state.Grid); // -1.5 * IsolationPenalty(state);
+                double smoothness = Smoothness(state);
+                double monotonicity = Monotonicity(state);
+                double emptycells = EmptyCells(state);
+                double highestvalue = HighestValue(state);
+                eval = smoothness_weight * smoothness + monotonicity_weight * monotonicity + emptycells_weight * emptycells + highestvalue_weight * highestvalue; // -1.5 * IsolationPenalty(state);
+               // Console.WriteLine("Smoothness = " + smooth + " Monotonicity = " + mon + " heuristic = " + eval);
+
                 //double snake = WeightSnake(state);
                 //eval = snake - Math.Log(snake) * IsolationPenalty(state);
-
                 if (state.IsWin())
-                    return 100000000 + eval;
+                    return 10 + eval;
                 else
                 {
                     return eval;
                 }
             }
+        }
+
+        // The highest value on the grid (in log2)
+        // range: {1, 17}
+        public static double HighestValue(State state)
+        {
+            return Math.Log(GridHelper.HighestTile(state.Grid)) / Math.Log(2);
         }
 
         public static double EvaluateAnnoyingState(GameEngine gameEngine, State state)
@@ -73,7 +107,10 @@ namespace _2048console
         }
 
         // This heuristic measures the "smoothness" of the grid
-        // 
+        // It does so by measuring the difference between neighbouring tiles (the log2 difference) and summing these
+        //
+        // The range of this heuristic is: {-384, 0}
+        
         public static double Smoothness(State state)
         {
             double smoothness = 0;
@@ -92,18 +129,18 @@ namespace _2048console
                         // check that we found a tile (do not take empty cells into account)
                         if (nearestTileRight.IsValid() && state.Grid[nearestTileRight.x][nearestTileRight.y] != 0) {
                             double neighbourValue = Math.Log(state.Grid[nearestTileRight.x][nearestTileRight.y]) / Math.Log(2);
-                            smoothness -= Math.Abs(currentValue - neighbourValue);
+                            smoothness += Math.Abs(currentValue - neighbourValue);
                         }
 
                         if (nearestTileUp.IsValid() && state.Grid[nearestTileUp.x][nearestTileUp.y] != 0)
                         {
-                            int neighbourValue = state.Grid[nearestTileUp.x][nearestTileUp.y];
-                            smoothness -= Math.Abs(currentValue - neighbourValue);
+                            double neighbourValue = Math.Log(state.Grid[nearestTileUp.x][nearestTileUp.y]) / Math.Log(2);
+                            smoothness += Math.Abs(currentValue - neighbourValue);
                         }
                     }
                 }
             }
-            return smoothness;
+            return -smoothness;
         }
 
 
@@ -418,19 +455,19 @@ namespace _2048console
         }
 
         // returns the number of empty cells on the grid
-        // ranging between 2 and 16
+        // ranging between 0 and 16
         public static double EmptyCells(State state)
         {
-            int emptySquares = 0;
+            int emptyCells = 0;
             for (int i = 0; i < state.Grid.Length; i++)
             {
                 for (int j = 0; j < state.Grid.Length; j++)
                 {
                     if (state.Grid[i][j] == 0)
-                        emptySquares++;
+                        emptyCells++;
                 }
             }
-            return emptySquares;
+            return emptyCells;
         }
 
 
@@ -496,6 +533,8 @@ namespace _2048console
         // returns a score ranking a state according to how the tiles are increasing/decreasing in all directions
         // increasing/decreasing in the same directions (for example generally increasing in up and right direction) will return higher score 
         // than a state increasing in one row and decreasing in another row
+
+        // range: {-192, 0}
         public static double Monotonicity(State state)
         {
             double left = 0;
@@ -520,8 +559,8 @@ namespace _2048console
                     // only count instances where both cells are occupied
                     if (state.Grid[i][current] != 0 && state.Grid[i][next] != 0)
                     {
-                        double currentValue = Math.Log(state.Grid[i][current]);
-                        double nextValue = Math.Log(state.Grid[i][next]);
+                        double currentValue = Math.Log(state.Grid[i][current]) / Math.Log(2);
+                        double nextValue = Math.Log(state.Grid[i][next]) / Math.Log(2);
                         if (currentValue > nextValue) // increasing in down direction
                             down += nextValue - currentValue;
                         else if (nextValue > currentValue) // increasing in up direction
@@ -550,8 +589,8 @@ namespace _2048console
                     // only consider instances where both cells are occupied
                     if (state.Grid[current][j] != 0 && state.Grid[next][j] != 0)
                     {
-                        double currentValue = Math.Log(state.Grid[current][j]);
-                        double nextValue = Math.Log(state.Grid[next][j]);
+                        double currentValue = Math.Log(state.Grid[current][j]) / Math.Log(2);
+                        double nextValue = Math.Log(state.Grid[next][j]) / Math.Log(2);
                         if (currentValue > nextValue) // increasing in left direction
                             left += nextValue - currentValue;
                         else if (nextValue > currentValue) // increasing in right direction

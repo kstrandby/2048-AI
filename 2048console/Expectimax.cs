@@ -32,8 +32,8 @@ namespace _2048console
                 currentState = new State(GridHelper.CloneGrid(gameEngine.grid), scoreController.getScore(), GameEngine.PLAYER);
 
                 // run algorithm and send action choice to game engine
-                //Move action = Star1Expectimax(currentState, Double.MinValue, Double.MaxValue, depth, GameEngine.PLAYER);
-                Move move = ExpectimaxAlgorithm(currentState, chosenDepth);
+                Move move = Star1Expectimax(currentState, Double.MinValue, Double.MaxValue, chosenDepth);
+                //Move move = ExpectimaxAlgorithm(currentState, chosenDepth);
                 if (((PlayerMove)move).Direction == (DIRECTION)(-1))
                 {
                     // game over
@@ -52,8 +52,6 @@ namespace _2048console
         }
 
 
-        /*
-
         private Move Star1Expectimax(State state, double alpha, double beta, int depth)
         {
             Move bestMove;
@@ -63,26 +61,31 @@ namespace _2048console
                 if (state.Player == GameEngine.PLAYER)
                 {
                     bestMove = new PlayerMove(); // dummy action, as there will be no valid move
+                    bestMove.Score = AI.Evaluate(gameEngine, state);
+                    return bestMove;
                 }
                 else if (state.Player == GameEngine.COMPUTER)
                 {
                     bestMove = new ComputerMove(); // dummy action, as there will be no valid move
+                    bestMove.Score = AI.Evaluate(gameEngine, state);
+                    return bestMove;
                 }
                 else throw new Exception();
             }
             if (state.Player == GameEngine.PLAYER)
             {
+                bestMove = new PlayerMove();
                 double highestScore = Double.MinValue, currentScore = Double.MinValue;
 
                 List<Move> moves = state.GetMoves();
-                foreach (ACTION move in moves)
+                foreach (Move move in moves)
                 {
-                    State resultingState = AI.PlayerResult(state, move);
-                    currentScore = Star1Expectimax(resultingState, alpha, beta, depth - 1, GameEngine.COMPUTER).score;
+                    State resultingState = state.ApplyMove(move);
+                    currentScore = Star1Expectimax(resultingState, alpha, beta, depth - 1).Score;
                     if (currentScore > highestScore)
                     {
                         highestScore = currentScore;
-                        bestAction = move;
+                        bestMove = move;
                     }
                     alpha = Math.Max(alpha, highestScore);
                     if (beta <= alpha)
@@ -91,56 +94,59 @@ namespace _2048console
                     }
                 }
 
-                bestMove.playerAction = bestAction;
-                bestMove.score = highestScore;
+                bestMove.Score = highestScore;
                 return bestMove;
             }
-            else if (player == AI.COMPUTER) // computer's turn  (the random event node)
+            else if (state.Player == GameEngine.COMPUTER) // computer's turn  (the random event node)
             {
-                // return the weighted average of all the child nodes's scores
-                List<Cell> availableCells = AI.getAvailableCells(state);
-                List<int[]> actions = AI.getAllComputerMoves(state, availableCells);
-                int numSuccessors = actions.Count;
-                int highestTile = AI.findHighestTile(state);
-                double upperBound = AI.GetUpperBound(highestTile);
-                double lowerBound = AI.GetLowerBound(highestTile);
+                bestMove = new ComputerMove();
+
+                List<Cell> availableCells = state.GetAvailableCells();
+                List<Move> moves = state.GetAllComputerMoves(availableCells);
+
+                int numSuccessors = moves.Count;
+                //int highestTile = GridHelper.HighestTile(state.Grid);
+                double upperBound = AI.GetUpperBound();
+                double lowerBound = AI.GetLowerBound();
                 double curAlpha = numSuccessors * (alpha - upperBound) + upperBound;
                 double curBeta = numSuccessors * (beta - lowerBound) + lowerBound;
 
                 double scoreSum = 0;
                 int i = 1;
-                foreach (int[] action in actions)
+                foreach (Move move in moves)
                 {
                     double sucAlpha = Math.Max(curAlpha, lowerBound);
                     double sucBeta = Math.Min(curBeta, upperBound);
 
-                    State resultingState = AI.ComputerResult(state, action);
+                    State resultingState = state.ApplyMove(move);
 
-                    double score = Star1Expectimax(resultingState, sucAlpha, sucBeta, _depth - 1, AI.AI_PLAYER).score;
+                    double score = Star1Expectimax(resultingState, sucAlpha, sucBeta, depth - 1).Score;
                     scoreSum += score;
                     if (score <= curAlpha)
                     {
                         scoreSum += upperBound * (numSuccessors - i);
-                        bestMove.score = scoreSum / numSuccessors;
+                        bestMove.Score = scoreSum / numSuccessors;
                         return bestMove; // pruning
                     }
                     if (score >= curBeta)
                     {
                         scoreSum += lowerBound * (numSuccessors - i);
-                        bestMove.score = scoreSum / numSuccessors;
+                        bestMove.Score = scoreSum / numSuccessors;
                         return bestMove; // pruning
                     }
                     curAlpha += upperBound - score;
                     curBeta += lowerBound - score;
 
                     i++;
-                    
+
                 }
-                bestMove.score = scoreSum / numSuccessors;
+                bestMove.Score = scoreSum / numSuccessors;
+                return bestMove;
             }
-            return bestMove;
+
+            else throw new Exception();
         }
-         */
+
 
         private Move ExpectimaxAlgorithm(State state, int depth)
         {

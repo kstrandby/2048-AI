@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -20,12 +21,16 @@ namespace _2048console
             {8192, 106494}
         };
 
+        // stats
+        public StreamWriter writer;
+
         public MonteCarlo(GameEngine gameEngine, int simulations, double constant)
         {
             this.gameEngine = gameEngine;
             this.simulations = simulations;
             this.c = constant;
             this.random = new Random();
+           // writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\simrunstats.txt", true);
         }
 
         public State Run(bool print)
@@ -79,11 +84,15 @@ namespace _2048console
                     node = node.AddChild(randomMove, state);
                 }
 
+
+
                 // 3: Simulation
                 while (state.GetMoves().Count != 0)
                 {
                     state = state.ApplyMove(state.GetRandomMove());
                 }
+
+
 
                 // 4: Backpropagation
                 while (node != null)
