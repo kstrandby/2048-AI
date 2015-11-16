@@ -30,7 +30,6 @@ namespace _2048console
 
         public State Run(bool print)
         {
-            //StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\ExpectimaxTimeSpentPerMove.txt", true);
             // main game loop
             while (true)
             {
@@ -44,40 +43,20 @@ namespace _2048console
                     Console.SetCursorPosition(0, 0);
                     Console.WriteLine(GridHelper.ToString(currentState.Grid));
                 }
-                evaluatedStates = 0;
-                Stopwatch timer = new Stopwatch();
-                Stopwatch timer2 = new Stopwatch();
-                timer.Start();
+
                 // run algorithm and send action choice to game engine
                 //Move move = Star2Expectimax(currentState, AI.GetLowerBound(), AI.GetUpperBound(), chosenDepth);
                 //Move move = Star1Expectimax(currentState, Double.MinValue, Double.MaxValue, chosenDepth);
                 //Move move = ParallelExpectimax(currentState, chosenDepth);
-                //writer.WriteLine("{0,0}{1,10}", chosenDepth, evaluatedStates);
-                Move move1 = IterativeDeepening(currentState, 100);
+                //Move move1 = IterativeDeepening(currentState, 100);
                 //Move move = ThreadingStar1(currentState, chosenDepth);
-
-                timer.Stop();
-
-                timer2.Start();
                 Move move = ParallelIterativeDeepeningExpectimax(currentState, 100);
 
-                timer2.Stop();
-
-                //Console.WriteLine("Move chosen by IDE: " + ((PlayerMove)move).Direction);
-                //Console.WriteLine("Move chosen by PIDE: " + ((PlayerMove)move1).Direction);
-                if (((PlayerMove)move).Direction != ((PlayerMove)move1).Direction)
-                {
-                    //Console.Write("");
-                }
-
-                long time = timer.ElapsedMilliseconds;
-                //writer.WriteLine(time);
                 
                 if (((PlayerMove)move).Direction == (DIRECTION)(-1))
                 {
                     // game over
                     Console.WriteLine("GAME OVER, final score = " + scoreController.getScore());
-                    //writer.Close();
                     return currentState;
                 }
                 gameEngine.SendUserAction((PlayerMove)move);
@@ -198,55 +177,41 @@ namespace _2048console
 
         private Move ParallelIterativeDeepeningExpectimax(State state, int timeLimit)
         {
-
-            int depth = 1;
-            Stopwatch timer = new Stopwatch();
-
             Move bestMove = new PlayerMove();
 
             List<Move> moves = state.GetMoves();
             ConcurrentBag<Tuple<double, Move>> scores = new ConcurrentBag<Tuple<double, Move>>();
 
-            if (moves.Count == 0) // game over
+            if (moves.Count == 0)
             {
+                // game over
                 return bestMove;
             }
 
-            
-
-            timer.Start();
-            while (timer.ElapsedMilliseconds < timeLimit)
+            // create the resulting states before starting the threads
+            List<State> resultingStates = new List<State>();
+            foreach (Move move in moves)
             {
-                // create the resulting states before starting the threads
-                List<State> resultingStates = new List<State>();
-                foreach (Move move in moves)
-                {
-                    State resultingState = state.ApplyMove(move);
-                    resultingStates.Add(resultingState);
-                }
-
-                Parallel.ForEach(resultingStates, resultingState =>
-                {
-                    Tuple<Move, Boolean> result = IterativeDeepeningExpectimax(resultingState, depth - 1, timeLimit, timer);
-                    if(result.Item2) scores.Add(new Tuple<double, Move>(result.Item1.Score, resultingState.GeneratingMove));
-                });
-
-                // find the best score
-                double highestScore = Double.MinValue;
-                foreach (Tuple<double, Move> score in scores)
-                {
-                    
-                    if (score.Item1 > highestScore)
-                    {
-                        highestScore = score.Item1;
-                        bestMove = score.Item2;
-                    }
-                }
-                scores = new ConcurrentBag<Tuple<double, Move>>();
-                depth++;
+                State resultingState = state.ApplyMove(move);
+                resultingStates.Add(resultingState);
             }
-            //Console.WriteLine("Depth reached in PIDE: " + depth);
 
+            Parallel.ForEach(resultingStates, resultingState =>
+            {
+                double score = IterativeDeepening(resultingState, timeLimit).Score;
+                scores.Add(new Tuple<double, Move>(score, resultingState.GeneratingMove));
+            });
+            // find the best score
+            double highestScore = Double.MinValue;
+            foreach (Tuple<double, Move> score in scores)
+            {
+                PlayerMove move = (PlayerMove)score.Item2;
+                if (score.Item1 > highestScore)
+                {
+                    highestScore = score.Item1;
+                    bestMove = score.Item2;
+                }
+            }
             return bestMove;
         }
 
@@ -375,7 +340,6 @@ namespace _2048console
                 {
                     State resultingState = state.ApplyMove(move);
                     currentScore = ExpectimaxAlgorithm(resultingState, depth - 1).Score;
-                    //if(depth == chosenDepth) Console.WriteLine("Expectimax: Score for " + ((PlayerMove)move).Direction + " : " + currentScore);
                     if (currentScore > highestScore)
                     {
                         highestScore = currentScore;
