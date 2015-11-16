@@ -45,6 +45,19 @@ namespace _2048console
             }
         }
 
+        private Move generatingMove;
+        public Move GeneratingMove
+        {
+            get
+            {
+                return this.generatingMove;
+            }
+            set
+            {
+                this.generatingMove = value;
+            }
+        }
+
 
         public State(int[][] grid, int points, int turn)
         {
@@ -224,10 +237,27 @@ namespace _2048console
             if (move is PlayerMove)
             {
                 int[][] clonedGrid = GridHelper.CloneGrid(this.grid);
-                if (((PlayerMove)move).Direction == DIRECTION.LEFT) return ApplyLeft(clonedGrid);
-                else if (((PlayerMove)move).Direction == DIRECTION.RIGHT) return ApplyRight(clonedGrid);
-                else if (((PlayerMove)move).Direction == DIRECTION.DOWN) return ApplyDown(clonedGrid);
-                else if (((PlayerMove)move).Direction == DIRECTION.UP) return ApplyUp(clonedGrid);
+                if (((PlayerMove)move).Direction == DIRECTION.LEFT){
+                    State state = ApplyLeft(clonedGrid);
+                    state.GeneratingMove = move;
+                    return state;
+                }
+                else if (((PlayerMove)move).Direction == DIRECTION.RIGHT) {
+                    State state = ApplyRight(clonedGrid);
+                    state.GeneratingMove = move;
+                    return state;
+                }
+                    
+                else if (((PlayerMove)move).Direction == DIRECTION.DOWN) {
+                    State state = ApplyDown(clonedGrid);
+                    state.GeneratingMove = move;
+                    return state;
+                }
+                else if (((PlayerMove)move).Direction == DIRECTION.UP) {
+                    State state = ApplyUp(clonedGrid);
+                    state.GeneratingMove = move;
+                    return state;
+                }
                 else throw new Exception();
             }
             else if (move is ComputerMove)
@@ -237,6 +267,7 @@ namespace _2048console
                 int yPosition = ((ComputerMove)move).Position.Item2;
                 int tileValue = ((ComputerMove)move).Tile;
                 result.Grid[xPosition][yPosition] = tileValue;
+                result.GeneratingMove = move;
                 return result;
             }
             else

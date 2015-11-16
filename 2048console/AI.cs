@@ -27,6 +27,8 @@ namespace _2048console
         const double monotonicity_weight = 1.0;
         const double emptycells_weight = 0.5;
         const double highestvalue_weight = 1.0;
+        const double snake_weight = 0.5;
+        const double trappedpenalty_weight = 2.0;
 
         // for Expectimax Star1 pruning
         // NB: Remember to change this according to the heuristic in use
@@ -48,7 +50,8 @@ namespace _2048console
         {
             if (state.IsGameOver())
             {
-                return GetLowerBound();
+                return -1000;
+                //return GetLowerBound();
             }
             else
             {
@@ -58,18 +61,54 @@ namespace _2048console
                 double monotonicity = Monotonicity(state);
                 double emptycells = EmptyCells(state);
                 double highestvalue = HighestValue(state);
-                eval = smoothness_weight * smoothness + monotonicity_weight * monotonicity + emptycells_weight * emptycells + highestvalue_weight * highestvalue; // -1.5 * IsolationPenalty(state);
-               // Console.WriteLine("Smoothness = " + smooth + " Monotonicity = " + mon + " heuristic = " + eval);
+                double trappedpenalty = TrappedPenalty(state);
+                eval = smoothness_weight * smoothness + monotonicity_weight * monotonicity + emptycells_weight * emptycells + highestvalue_weight * highestvalue -trappedpenalty_weight * trappedpenalty;
 
-                //double snake = WeightSnake(state);
-                //eval = snake - Math.Log(snake) * IsolationPenalty(state);
+
                 if (state.IsWin())
-                    return 10 + eval;
+                    return 1000 + eval;
                 else
                 {
                     return eval;
                 }
             }
+        }
+
+        public static double TrappedPenalty(State state)
+        {
+            double trapped = 0;
+
+            for (int i = 0; i < GameEngine.COLUMNS; i++)
+            {
+                for (int j = 0; j < GameEngine.ROWS; j++)
+                {
+                    if (state.Grid[i][j] != 0)
+                    {
+                        // check neighbours in vertical direction
+                        int neighbourRowAbove = j + 1;
+                        int neighbourRowBelow = j - 1;
+                        if ((neighbourRowAbove < GameEngine.ROWS && state.Grid[i][neighbourRowAbove] > state.Grid[i][j] && j == 0) // trapped between wall below and higher card above
+                            || (neighbourRowBelow >= 0 && state.Grid[i][neighbourRowBelow] > state.Grid[i][j] && j == 3) // trapped between wall above and higher card below
+                            || (neighbourRowAbove < GameEngine.ROWS && state.Grid[i][neighbourRowAbove] > state.Grid[i][j] // trapped between two higher cards
+                                && neighbourRowBelow >= 0 && state.Grid[i][neighbourRowBelow] > state.Grid[i][j]))
+                        {
+                            trapped++;
+                        }
+
+                        // check neighbours in horizontal direction
+                        int neighbourColumnToRight = i + 1;
+                        int neighbourColumnToLeft = i - 1;
+                        if ((neighbourColumnToRight < GameEngine.COLUMNS && state.Grid[neighbourColumnToRight][j] > state.Grid[i][j] && i == 0) // trapped between wall to the left and higher card to the right
+                            || (neighbourColumnToLeft >= 0 && state.Grid[neighbourColumnToLeft][j] > state.Grid[i][j] && i == 3) // trapped between wall to the right and higher card to the left
+                            || (neighbourColumnToRight < GameEngine.COLUMNS && state.Grid[neighbourColumnToRight][j] > state.Grid[i][j] // trapped between two higher cards
+                                && neighbourColumnToLeft >= 0 && state.Grid[neighbourColumnToLeft][j] > state.Grid[i][j]))
+                        {
+                            trapped++;
+                        }
+                    }
+                }
+            }
+            return trapped;
         }
 
         // The highest value on the grid (in log2)
@@ -79,32 +118,29 @@ namespace _2048console
             return Math.Log(GridHelper.HighestTile(state.Grid)) / Math.Log(2);
         }
 
-        public static double EvaluateAnnoyingState(GameEngine gameEngine, State state)
+        // returns the number of empty cells on the grid
+        // ranging between 0 and 16
+        public static double EmptyCells(State state)
         {
-            return Evaluate(gameEngine, state);
-
-        }
-
-        // Arranges the tiles in the bottom row and left-most column
-        // The higher the tiles in cells that are NOT in left-most column or bottom row, the higher this heuristic score will be
-        //
-        // NOTE: Use this heuristic as a penalty
-        public static double LargeValuesAtBorder(State state)
-        {
-            double score = 0;
+            int emptyCells = 0;
             for (int i = 0; i < state.Grid.Length; i++)
             {
                 for (int j = 0; j < state.Grid.Length; j++)
                 {
-                    if (state.Grid[i][j] != 0)
-                    {
-                        int dist = Math.Min(i, j);
-                        score += dist * Math.Log(state.Grid[i][j]) / Math.Log(2);
-                    }
+                    if (state.Grid[i][j] == 0)
+                        emptyCells++;
                 }
             }
-            return score;
+            return emptyCells;
         }
+
+
+        // returns the number of points in the state
+        public static double Points(State state)
+        {
+            return state.Points;
+        }
+
 
         // This heuristic measures the "smoothness" of the grid
         // It does so by measuring the difference between neighbouring tiles (the log2 difference) and summing these
@@ -183,35 +219,6 @@ namespace _2048console
         }
 
 
-        // This heuristic counts the number of isolated tiles
-        // Here an isolated tile is considered a tile, where all neighbours are occupied by other tiles with higher values
-        //
-        // NOTE: Use this heuristic as a penalty
-        public static double IsolationPenalty(State state)
-        {
-            int isolatedTiles = 0;
-
-            // check that all neighbours have higher values
-            for (int i = 0; i < state.Grid.Length; i++)
-            {
-                for (int j = 0; j < state.Grid.Length; j++)
-                {
-                    if (state.Grid[i][j] != 0)
-                    {
-                        List<Tuple<int,int>> neighbours = GetNeighbours(state, i, j);
-                        int numberOfNeighbours = neighbours.Count;
-                        int numberOfHigherNeighbours = 0;
-                        foreach (Tuple<int, int> neighbour in neighbours)
-                        {
-                            if (state.Grid[i][j] < state.Grid[neighbour.Item1][neighbour.Item2]) numberOfHigherNeighbours++;
-                        }
-                        if (numberOfHigherNeighbours == numberOfNeighbours) isolatedTiles++;
-                    }
-                }
-            }
-            return isolatedTiles;
-        }
-
         // Helper method to get a list of neighbours to a specific cell
         private static List<Tuple<int, int>> GetNeighbours(State state, int i, int j)
         {
@@ -282,24 +289,77 @@ namespace _2048console
 
  
 
-        public static double CornerMountain(State state)
+        public static double Corner(State state)
         {
-            double[][] mountainMatrix = new double[][] {
-				new double[]{0.7,0.6,0.5,0.4},
-				new double[]{0.6,0.5,0.4,0.3},
-				new double[]{0.5,0.4,0.3,0.2},
-				new double[]{0.4,0.3,0.2,0.1}
-			};
-
-            double[][] mountainMatrix2 = new double[][] {
-                new double[]{15.0,14.0,13.0,12.0},
-				new double[]{14.0,10.0,8.0,6.0},
-				new double[]{13.0,8.0,6.0,4.0},
-				new double[]{12.0,6.0,4.0,2.0}
+            double[][] corner1 = new double[][] {
+                new double[]{20,12,4,0.4},
+                new double[]{19,11,3,0.3},
+                new double[]{18,10,2,0.2},
+                new double[]{17,9,1,0.1}
             };
 
-            return GridHelper.GridSum(GridHelper.MultiplyGrids(state.Grid, mountainMatrix2));
+            double[][] corner2 = new double[][] {
+                new double[]{0.4,4,12,20},
+                new double[]{0.3,3,11,19},
+                new double[]{0.2,2,10,18},
+                new double[]{0.1,1,9,17}
+            };
+
+            double[][] corner3 = new double[][] {
+                new double[]{17,9,1,0.1},
+                new double[]{18,10,2,0.2},
+                new double[]{19,11,3,0.3},
+                new double[]{20,12,4,0.4}
+            };
+
+            double[][] corner4 = new double[][] {
+                new double[]{0.1,1,9,17},
+                new double[]{0.2,2,10,18},
+                new double[]{0.3,3,11,19},
+                new double[]{0.4,4,12,20}
+            };
+
+            double[][] corner5 = new double[][] {
+                new double[]{20,19,18,17},
+                new double[]{12,11,10,9},
+                new double[]{4,3,2,1},
+                new double[]{0.4,0.3,0.2,0.1}
+            };
+
+            double[][] corner6 = new double[][] {
+                new double[]{17,18,19,20},
+                new double[]{9,10,11,12},
+                new double[]{1,2,3,4},
+                new double[]{0.1,0.2,0.3,0.4}
+            };
+
+            double[][] corner7 = new double[][] {
+                new double[]{0.4,0.3,0.2,0.1},
+                new double[]{4,3,2,1},
+                new double[]{12,11,10,9},
+                new double[]{20,19,18,17}
+            };
+
+            double[][] corner8 = new double[][] {
+                new double[]{0.1,0.2,0.3,0.4},
+                new double[]{1,2,3,4},
+                new double[]{9,10,11,12},
+                new double[]{17,18,19,20}
+            };
+            List<double[][]> weightMatrices = new List<double[][]>();
+
+            weightMatrices.Add(corner1);
+            weightMatrices.Add(corner2);
+            weightMatrices.Add(corner3);
+            weightMatrices.Add(corner4);
+            weightMatrices.Add(corner5);
+            weightMatrices.Add(corner6);
+            weightMatrices.Add(corner7);
+            weightMatrices.Add(corner8);
+
+            return MaxProductMatrix(state.Grid, weightMatrices);
         }
+
 
 
 
@@ -309,61 +369,62 @@ namespace _2048console
         public static double WeightSnake(State state)
         {
             double[][] snake1 = new double[][] {
-                new double[]{16,9,8,1},
-                new double[]{15,10,7,2},
-                new double[]{14,11,6,3},
-                new double[]{13,12,5,4}
+                new double[]{20,9,4,.1},
+                new double[]{19,10,3,0.2},
+                new double[]{18,11,2,0.3},
+                new double[]{17,12,1,0.4}
             };
 
             double[][] snake2 = new double[][] {
-                new double[]{16,15,14,13},
+                new double[]{20,19,18,17},
                 new double[]{9,10,11,12},
-                new double[]{8,7,6,5},
-                new double[]{1,2,3,4}
+                new double[]{4,3,2,1},
+                new double[]{0.1,0.2,0.3,0.4}
             };
 
             double[][] snake3 = new double[][]{
-                new double[]{13,12,5,4},
-                new double[]{14,11,6,3},
-                new double[]{15,10,7,2},
-                new double[]{16,9,8,1}
+                new double[]{17,12,1,0.4},
+                new double[]{18,11,2,0.3},
+                new double[]{19,10,3,0.2},
+                new double[]{20,9,4,0.1}
             };
 
             double[][] snake4 = new double[][] {
-                new double[]{13,14,15,16},
+                new double[]{17,18,19,20},
                 new double[]{12,11,10,9},
-                new double[]{5,6,7,8},
-                new double[]{4,3,2,1}
+                new double[]{1,2,3,4},
+                new double[]{0.4,0.3,0.2,0.1}
             };
 
             double[][] snake5 = new double[][] {
-                new double[]{1,2,3,4},
-                new double[]{8,7,6,5},
+                new double[]{0.1,0.2,0.3,0.4},
+                new double[]{4,3,2,1},
                 new double[]{9,10,11,12},
-                new double[]{16,15,14,13}
+                new double[]{20,19,18,17}
             };
 
             double[][] snake6 = new double[][] {
-                new double[]{1,8,9,16},
-                new double[]{2,7,10,15},
-                new double[]{3,6,11,14},
-                new double[]{4,5,12,13}
+                new double[]{0.1,4,9,20},
+                new double[]{0.2,3,10,19},
+                new double[]{0.3,2,11,18},
+                new double[]{0.4,1,12,17}
             };
 
             double[][] snake7 = new double[][] {
-                new double[]{4,3,2,1},
-                new double[]{5,6,7,8},
+                new double[]{0.4,0.3,0.2,0.1},
+                new double[]{1,2,3,4},
                 new double[]{12,11,10,9},
-                new double[]{13,14,15,16}
+                new double[]{17,18,19,20}
             };
 
             double[][] snake8 = new double[][] {
-                new double[]{4,5,12,13},
-                new double[]{3,6,11,14},
-                new double[]{2,7,10,15},
-                new double[]{1,8,9,16}
+                new double[]{0.4,1,12,17},
+                new double[]{0.3,2,11,18},
+                new double[]{0.2,3,10,19},
+                new double[]{0.1,4,9,20}
             };
 
+            
             List<double[][]> weightMatrices = new List<double[][]>();
             weightMatrices.Add(snake1);
             weightMatrices.Add(snake2);
@@ -382,7 +443,7 @@ namespace _2048console
         // sum when multiplied with the grid and summed up, returns this sum
         private static double MaxProductMatrix(int[][] grid, List<double[][]> weightMatrices)
         {
-            List<double> sums = new List<double>(){0,0,0,0,0,0,0,0};
+            List<double> sums = new List<double>(){0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
             
             for (int i = 0; i < grid.Length; i++)
             {
@@ -452,81 +513,6 @@ namespace _2048console
                 }
             }
             return mergePoints;
-        }
-
-        // returns the number of empty cells on the grid
-        // ranging between 0 and 16
-        public static double EmptyCells(State state)
-        {
-            int emptyCells = 0;
-            for (int i = 0; i < state.Grid.Length; i++)
-            {
-                for (int j = 0; j < state.Grid.Length; j++)
-                {
-                    if (state.Grid[i][j] == 0)
-                        emptyCells++;
-                }
-            }
-            return emptyCells;
-        }
-
-
-        // returns the number of points in the state
-        public static double Points(State state)
-        {
-            return state.Points;
-        }
-
-
-        // returns a score ranking a state according to how bad tiles with similar values are positioned next to each other
-        // tiles with a huge difference in value next to each other will get a large score, whereas tiles with similar values will get a lower score
-        // 
-        // Note: use this heuristic as a penalty - i.e. subtract it, or take the negative of it
-        public static int MonotonicityValDiff(State state)
-        {
-            int score = 0;
-
-            int[] directions = { -1, 0, 1 };
-
-            for (int i = 0; i < state.Grid.Length; i++)
-            {
-                for (int j = 0; j < state.Grid.Length; j++)
-                {
-                    // don't consider empty cells
-                    if (state.Grid[i][j] != 0)
-                    {
-
-                        // find the distance from each neighbour (difference between values of tiles)
-                        // and count the number of neighbours
-                        int neighbours = 0;
-                        int valueDiffs = 0;
-                        foreach (int x_direction in directions)
-                        {
-                            // check x boundaries
-                            int next_x = i + x_direction;
-                            if (next_x < 0 || next_x >= state.Grid.Length)
-                                continue;
-
-                            foreach (int y_direction in directions)
-                            {
-                                // check y boundaries
-                                int next_y = j + y_direction;
-                                if (next_y < 0 || next_y >= state.Grid.Length)
-                                    continue;
-
-                                // don't consider empty cells
-                                if (state.Grid[next_x][next_y] > 0)
-                                {
-                                    neighbours++;
-                                    valueDiffs += Math.Abs(state.Grid[i][j] - state.Grid[next_x][next_y]);
-                                }
-                            }
-                        }
-                        score += valueDiffs / neighbours;
-                    }
-                }
-            }
-            return score;
         }
 
 
@@ -602,56 +588,6 @@ namespace _2048console
                 }
             }
             return Math.Max(up, down) + Math.Max(left, right);
-        }
-
-        // This heuristic only gives points if the highest tile is in the bottom left corner
-        // It then gives more points if the second highest tile is next to (on the bottom row)
-        // and more again if the third highest tile is next to the second highest (also on bottom row)
-        public static double ThreeTilesStatic(State state)
-        {
-            double points = 0;
-            int highest = 0, secondHighest = 0, thirdHighest = 0;
-            int highest_x = 0, highest_y = 0, secondHighest_x = 0, secondHighest_y = 0, thirdHighest_x = 0, thirdHighest_y = 0;
-            for (int i = 0; i < state.Grid.Length; i++)
-            {
-                for (int j = 0; j < state.Grid.Length; j++)
-                {
-                    if (state.Grid[i][j] > highest)
-                    {
-                        highest = state.Grid[i][j];
-                        highest_x = i;
-                        highest_y = j;
-                    }
-                    else if (state.Grid[i][j] <= highest && state.Grid[i][j] > secondHighest)
-                    {
-                        secondHighest = state.Grid[i][j];
-                        secondHighest_x = i;
-                        secondHighest_y = j;
-                    }
-                    else if (state.Grid[i][j] <= secondHighest && state.Grid[i][j] > thirdHighest)
-                    {
-                        thirdHighest = state.Grid[i][j];
-                        thirdHighest_x = i;
-                        thirdHighest_y = j;
-                    }
-                }
-            }
-
-            if (highest_x == 0 && highest_y == 0)
-            {
-                points += highest;
-
-                if (secondHighest_x == 1 && secondHighest_y == 0)
-                {
-                    points += secondHighest;
-
-                    if (thirdHighest_x == 2 && thirdHighest_y == 0)
-                    {
-                        points += thirdHighest;
-                    }
-                }
-            }
-            return points;
         }
     }
 }

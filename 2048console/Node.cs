@@ -111,7 +111,7 @@ namespace _2048console
             Node selected = null;
             double best = Double.MinValue;
 
-            double c = this.state.Points + 2000;
+            double c = this.state.Points - 2000;
 
             foreach (Node child in children)
             {

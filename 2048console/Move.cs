@@ -14,7 +14,7 @@ namespace _2048console
         UP = 3
     }
 
-    public class Move
+    public class Move 
     {
         private double score;
         public double Score

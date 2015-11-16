@@ -13,12 +13,6 @@ namespace _2048console
     {
         static void Main(string[] args)
         {
-           
-
-            Console.ReadLine();
-            Console.WriteLine("Starting game...");
-            Thread.Sleep(500);
-            Console.SetCursorPosition(0, 0);
             ShowMenu();        
         }
 
@@ -80,7 +74,7 @@ namespace _2048console
                 Console.WriteLine("Choose number of simulations: ");
                 int simulations = Convert.ToInt32(Console.ReadLine());
 
-                StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\MCTS_c=parent.points+2000.txt", true);
+                StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\MCTStl10.txt", true);
                 int num1024 = 0;
                 int num2048 = 0;
                 int num4096 = 0;
@@ -123,8 +117,10 @@ namespace _2048console
             {
                 Console.SetCursorPosition(0, 0);
                 CleanConsole();
+                Console.WriteLine("Depth?");
+                int depth = Convert.ToInt32(Console.ReadLine());
                 GameEngine game = new GameEngine();
-                Expectimax expectimax = new Expectimax(game, 1);
+                Expectimax expectimax = new Expectimax(game, depth);
                 expectimax.Run(true);
                 Console.ReadLine();
             }
@@ -135,7 +131,7 @@ namespace _2048console
                 Console.WriteLine("Choose depth: ");
                 int depth = Convert.ToInt32(Console.ReadLine());
 
-                StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\Expectimax_NoPruning.txt", true);
+                //StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\ExpectimaxIterativeDeepeningTL100", true);
                 int num512 = 0;
                 int num1024 = 0;
                 int num2048 = 0;
@@ -158,14 +154,14 @@ namespace _2048console
 
                     int highestTile = GridHelper.HighestTile(endState.Grid);
                     int points = endState.Points;
-                    writer.WriteLine("{0,0}{1,10}{2,15}{3,12}{4,15}", i, depth, highestTile, points, elapsedMs);
+                    //writer.WriteLine("{0,0}{1,10}{2,15}{3,12}{4,15}", i, depth, highestTile, points, elapsedMs);
                     if (highestTile >= 512) num512++;
                     if (highestTile >= 1024) num1024++;
                     if (highestTile >= 2048) num2048++;
                     if (highestTile >= 4096) num4096++;
                     if (highestTile >= 8192) num8192++;
                 }
-                writer.Close();
+                //writer.Close();
                 Console.WriteLine("512: " + (double)num512 / runs * 100 + "%, 1024: " + (double)num1024 / runs * 100 + "%, 2048: " + (double)num2048 / runs * 100 + "%, 4096: " + (double)num4096 / runs * 100 + "%, 8192: " + (double)num8192 / runs * 100 + "%");
                 Console.ReadLine();
             }
@@ -199,7 +195,7 @@ namespace _2048console
                 Console.WriteLine("Choose depth: ");
                 int depth = Convert.ToInt32(Console.ReadLine());
 
-                StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\TestStats.txt", true);
+                StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\AlphaBetaIterativeDeepeningTL100.txt", true);
                 int num1024 = 0;
                 int num2048 = 0;
                 int num4096 = 0;
@@ -208,7 +204,11 @@ namespace _2048console
                     Console.Write(i + ": ");
                     GameEngine game = new GameEngine();
                     Minimax minimax = new Minimax(game, depth);
+                    var watch = Stopwatch.StartNew();
                     State endState = minimax.Run(false);
+                    watch.Stop();
+                    var elapsedMs = watch.ElapsedMilliseconds;
+                    Console.WriteLine("Execution time: " + elapsedMs + " ms");
                     int highestTile = GridHelper.HighestTile(endState.Grid);
                     int points = endState.Points;
                     writer.WriteLine("{0,0}{1,10}{2,15}{3,12}", i, depth, highestTile, points);
@@ -217,7 +217,7 @@ namespace _2048console
                     if (highestTile >= 4096) num4096++;
                 }
                 writer.Close();
-                Console.WriteLine("1024: " + num1024 + "%, 2048: " + num2048 + "%, 4096: " + num4096 + "%");
+                Console.WriteLine("1024: " + (double)(num1024/runs * 100) + "%, 2048: " +(double)(num2048/runs * 100) + "%, 4096: " + (double)(num4096/runs * 100) + "%");
                 Console.ReadLine();
 
             }
@@ -305,7 +305,7 @@ namespace _2048console
         public static void CleanConsole()
         {
             Console.SetCursorPosition(0, 0);
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 20; i++)
             {
                 Console.WriteLine("                                                                                                                                                                                                                   ");
             }
