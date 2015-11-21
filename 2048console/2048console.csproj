@@ -45,12 +45,11 @@
     <Compile Include="Cell.cs" />
     <Compile Include="Expectimax.cs" />
     <Compile Include="GameEngine.cs" />
-    <Compile Include="Grid.cs" />
+    <Compile Include="BoardHelper.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Minimax.cs" />
     <Compile Include="MonteCarlo.cs" />
     <Compile Include="Move.cs" />
-    <Compile Include="NaiveAI.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

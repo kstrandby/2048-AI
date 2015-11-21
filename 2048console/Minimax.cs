@@ -10,23 +10,20 @@ using System.Threading.Tasks;
 
 namespace _2048console
 {
+    // class used for Minimax searches
     class Minimax
     {
-        public GameEngine gameEngine;
-        public ScoreController scoreController;
+        private const string LOGFILE = @"Log.txt";
 
-        public State currentState;
-
-        public List<Cell> available;
-
+        private GameEngine gameEngine;
+        private ScoreController scoreController;
+        private State currentState;
+        private List<Cell> available;
         private int chosenDepth;
 
         // debugging
         private Logger logger;
         bool debug = false; // switch to turn debug on/off
-
-        public bool running;
-
 
         public Minimax(GameEngine gameEngine, int depth)
         {
@@ -38,64 +35,138 @@ namespace _2048console
             // setup log file if debug is on
             if (debug)
             {
-                logger = new Logger(@"C:\Users\Kristine\Desktop\log.txt", depth);
+                logger = new Logger(LOGFILE, depth);
             }
         }
 
-
-        public State Run(bool print)
+        public State RunClassicMinimax(bool print)
         {
-            running = true;
-            //StreamWriter writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\MinimaxIterativeDeepeningTL100.txt", true);
-
-            // run main game loop
             while (true)
             {
                 // update state
-                currentState = new State(GridHelper.CloneGrid(gameEngine.grid), scoreController.getScore(), GameEngine.PLAYER);
+                currentState = new State(BoardHelper.CloneBoard(gameEngine.board), scoreController.getScore(), GameEngine.PLAYER);
 
-                
+                if (print)
+                {
+                    Program.PrintState(currentState);
+                }
 
-                Stopwatch timer = new Stopwatch();
-                timer.Start();
-                // run algorithm and send choice action to game engine
-                //Move move = AlphaBeta(currentState, chosenDepth, Double.MinValue, Double.MaxValue);
-                //Move move = ThreadingAlphaBeta(currentState, chosenDepth, Double.MinValue, Double.MaxValue);
-                Move move = IterativeDeepening(currentState, 100);
-                
-                //Move move = MinimaxAlgorithm(currentState, chosenDepth);
-                timer.Stop();
-                //writer.WriteLine("{0,0}", timer.ElapsedMilliseconds);
-                if (((PlayerMove)move).Direction== (DIRECTION)(-1))
+                // run algorithm and send action choice to game engine
+                Move move = MinimaxAlgorithm(currentState, chosenDepth);
+                if (((PlayerMove)move).Direction == (DIRECTION)(-1))
                 {
                     // game over
-                    Console.WriteLine("GAME OVER, final score = " + scoreController.getScore());
-                    //writer.Close();
-                    running = false;
                     if (debug)
                     {
-                       logger.WriteLog(true);
+                        logger.WriteLog(true);
                     }
                     return currentState;
                 }
-
-                gameEngine.SendUserAction((PlayerMove)move);
-
                 if (debug)
                 {
-                    logger.WriteLog(false);
+                    logger.WriteLog(true);
                 }
-                if (print)
-                {
-                    Console.SetCursorPosition(0, 0);
-                    Console.WriteLine(GridHelper.ToString(currentState.Grid));
-                    Thread.Sleep(500);
-                }
+                gameEngine.SendUserAction((PlayerMove)move);
             }
-           
         }
 
-        Move ThreadingAlphaBeta(State state, int depth, double alpha, double beta)
+        public State RunAlphaBeta(bool print)
+        {
+            while (true)
+            {
+                // update state
+                currentState = new State(BoardHelper.CloneBoard(gameEngine.board), scoreController.getScore(), GameEngine.PLAYER);
+
+                if (print)
+                {
+                    Program.PrintState(currentState);
+                }
+
+                // run algorithm and send action choice to game engine
+                Move move = AlphaBeta(currentState, chosenDepth, Double.MinValue, Double.MaxValue);
+                if (((PlayerMove)move).Direction == (DIRECTION)(-1))
+                {
+                    // game over
+                    if (debug)
+                    {
+                        logger.WriteLog(true);
+                    }
+                    return currentState;
+                }
+                if (debug)
+                {
+                    logger.WriteLog(true);
+                }
+                gameEngine.SendUserAction((PlayerMove)move);
+            }
+        }
+
+        public State RunIterativeDeepeningAlphaBeta(bool print, int timeLimit)
+        {
+            while (true)
+            {
+                // update state
+                currentState = new State(BoardHelper.CloneBoard(gameEngine.board), scoreController.getScore(), GameEngine.PLAYER);
+
+                if (print)
+                {
+                    Program.PrintState(currentState);
+                }
+
+                // run algorithm and send action choice to game engine
+                Move move = IterativeDeepening(currentState, timeLimit);
+                if (((PlayerMove)move).Direction == (DIRECTION)(-1))
+                {
+                    // game over
+                    if (debug)
+                    {
+                        logger.WriteLog(true);
+                    }
+                    return currentState;
+                }
+                if (debug)
+                {
+                    logger.WriteLog(true);
+                }
+                gameEngine.SendUserAction((PlayerMove)move);
+            }
+        }
+
+        public State RunParallelAlphaBeta(bool print)
+        {
+            while (true)
+            {
+                // update state
+                currentState = new State(BoardHelper.CloneBoard(gameEngine.board), scoreController.getScore(), GameEngine.PLAYER);
+
+                if (print)
+                {
+                    Program.PrintState(currentState);
+                }
+
+                // run algorithm and send action choice to game engine
+                Move move = ParallelAlphaBeta(currentState, chosenDepth, Double.MinValue, Double.MaxValue);
+                if (((PlayerMove)move).Direction == (DIRECTION)(-1))
+                {
+                    // game over
+                    if (debug)
+                    {
+                        logger.WriteLog(true);
+                    }
+                    return currentState;
+                }
+                if (debug)
+                {
+                    logger.WriteLog(true);
+                }
+                gameEngine.SendUserAction((PlayerMove)move);
+            }
+        }
+
+        // Runs a parallel alpha-beta search
+        // A search is started in a separate thread for each child node
+        // Note that pruning is not done across threads
+        Move ParallelAlphaBeta(State state, int depth, double alpha, double beta)
         {
             Move bestMove = new PlayerMove();
 
@@ -135,6 +206,7 @@ namespace _2048console
             return bestMove;
         }
 
+        // runs an iterative deepening minimax search limited by the given timeLimit
         private Move IterativeDeepening(State state, double timeLimit)
         {
             int depth = 0;
@@ -147,12 +219,13 @@ namespace _2048console
                 Tuple<Move, Boolean> result = IterativeDeepeningAlphaBeta(state, depth, Double.MinValue, Double.MaxValue, timeLimit, timer);
                 if (result.Item2) bestMove = result.Item1; // only update bestMove if full recursion
                 depth++;
-
-
             }
             return bestMove;
         }
 
+        // recursive part of the minimax algorithm when used in iterative deepening search
+        // checks at each recursion if timeLimit has been reached
+        // if is has, it cuts of the search and returns the best move found so far, along with a boolean indicating that the search was not fully completed
         private Tuple<Move, Boolean> IterativeDeepeningAlphaBeta(State state, int depth, double alpha, double beta, double timeLimit, Stopwatch timer)
         {
             Move bestMove;
@@ -268,7 +341,7 @@ namespace _2048console
                 return Min(state, depth, alpha, beta);
         }
 
-
+        // MIN part of Minimax (with alpha-beta pruning)
         Move Min(State state, int depth, double alpha, double beta)
         {
 
@@ -301,6 +374,7 @@ namespace _2048console
             return bestMove;
         }
 
+        // MAX part of Minimax (with alpha-beta pruning)
         Move Max(State state, int depth, double alpha, double beta)
         {
             Move bestMove = new PlayerMove();
@@ -336,6 +410,7 @@ namespace _2048console
             return bestMove;
         }
 
+        // Standard Minimax search with no pruning
         Move MinimaxAlgorithm(State state, int depth)
         {
             Move bestMove;

@@ -17,9 +17,9 @@ namespace _2048console
 
         public DIRECTION chooseAction()
         {
-            if (GridHelper.CheckDown(gameEngine.grid)) return DIRECTION.DOWN;
-            else if (GridHelper.CheckLeft(gameEngine.grid)) return DIRECTION.LEFT;
-            else if (GridHelper.CheckRight(gameEngine.grid)) return DIRECTION.RIGHT;
+            if (BoardHelper.CheckDown(gameEngine.board)) return DIRECTION.DOWN;
+            else if (BoardHelper.CheckLeft(gameEngine.board)) return DIRECTION.LEFT;
+            else if (BoardHelper.CheckRight(gameEngine.board)) return DIRECTION.RIGHT;
             else return DIRECTION.UP;
         }
     }

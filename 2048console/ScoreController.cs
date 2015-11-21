@@ -5,6 +5,7 @@ using System.Text;
 
 namespace _2048console
 {
+    // Class to manage the score during a game
     public class ScoreController
     {
         private int score;

@@ -1,8 +1,4 @@
-﻿/*
- * Node class used by Monte Carlo Tree Search
- */
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,11 +6,14 @@ using System.Threading.Tasks;
 
 namespace _2048console
 {
-    public class Node
+    // Node class used by Monte Carlo Tree Search
+    class Node
     {
+        // State of the node
         private State state;
-        
-        private Move generatingMove; // move that resulted in this node (null for root node)
+
+        // move that resulted in this node (null for root node)
+        private Move generatingMove; 
         public Move GeneratingMove
         {
             get
@@ -26,6 +25,8 @@ namespace _2048console
                 this.generatingMove = value;
             }
         } 
+
+        // parent node (null if root node)
         private Node parent;
         public Node Parent
         {
@@ -38,7 +39,9 @@ namespace _2048console
                 this.parent = value;
             }
         }
-        private int visits;
+        
+        // sum of all results of simulations where this node has been visited
+        // prior to simulation
         private double results;
         public double Results
         {
@@ -47,6 +50,9 @@ namespace _2048console
                 return this.results;
             }
         }
+
+        // number of times this node has been visited during the search
+        private int visits;
         public int Visits
         {
             get
@@ -55,7 +61,7 @@ namespace _2048console
             }
         }
 
-
+        // child nodes
         private List<Node> children;
         public List<Node> Children
         {
@@ -68,6 +74,8 @@ namespace _2048console
                 this.children = value;
             }
         }
+
+        // moves that still hasn't been explored
         private List<Move> untriedMoves;
         public List<Move> UntriedMoves
         {
@@ -92,12 +100,16 @@ namespace _2048console
             this.untriedMoves = state.GetMoves();
         }
 
+        // called during backpropagation
+        // updates the statistics of the node
         public void Update(double result) 
         {
             this.visits += 1;
             this.results += result; 
         }
 
+        // adds a child node to the list of children
+        // after exploring a move - removes the move from untried
         public Node AddChild(Move move, State state)
         {
             Node child = new Node(move, this, state); 
@@ -106,6 +118,8 @@ namespace _2048console
             return child;
         } 
 
+        // Selects a child based on the TREE POLICY
+        // implements UCT
         public Node SelectChild()
         {
             Node selected = null;

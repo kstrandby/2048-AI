@@ -61,14 +61,14 @@ namespace _2048console
                 for (int j = 0; j < 4; j++)
                 {
                     string append = "";
-                    if (state.Grid[j][i - 2] < 10)
-                        append = "|   " + state.Grid[j][i - 2] + "  ";
-                    else if (state.Grid[j][i - 2] >= 10 && state.Grid[j][i - 2] < 100)
-                        append = "|  " + state.Grid[j][i - 2] + "  ";
-                    else if (state.Grid[j][i - 2] >= 100 && state.Grid[j][i - 2] < 1000)
-                        append = "|  " + state.Grid[j][i - 2] + " ";
-                    else if (state.Grid[j][i - 2] >= 1000 && state.Grid[j][i - 2] < 10000)
-                        append = "| " + state.Grid[j][i - 2] + " ";
+                    if (state.Board[j][i - 2] < 10)
+                        append = "|   " + state.Board[j][i - 2] + "  ";
+                    else if (state.Board[j][i - 2] >= 10 && state.Board[j][i - 2] < 100)
+                        append = "|  " + state.Board[j][i - 2] + "  ";
+                    else if (state.Board[j][i - 2] >= 100 && state.Board[j][i - 2] < 1000)
+                        append = "|  " + state.Board[j][i - 2] + " ";
+                    else if (state.Board[j][i - 2] >= 1000 && state.Board[j][i - 2] < 10000)
+                        append = "| " + state.Board[j][i - 2] + " ";
 
                     line += append;
                     if (j == 3)
@@ -92,14 +92,14 @@ namespace _2048console
                 for (int j = 0; j < 4; j++)
                 {
                     string append = "";
-                    if (state.Grid[j][i - 2] < 10)
-                        append = "|   " + state.Grid[j][i - 2] + "  ";
-                    else if (state.Grid[j][i - 2] >= 10 && state.Grid[j][i - 2] < 100)
-                        append = "|  " + state.Grid[j][i - 2] + "  ";
-                    else if (state.Grid[j][i - 2] >= 100 && state.Grid[j][i - 2] < 1000)
-                        append = "|  " + state.Grid[j][i - 2] + " ";
-                    else if (state.Grid[j][i - 2] >= 1000 && state.Grid[j][i - 2] < 10000)
-                        append = "| " + state.Grid[j][i - 2] + " ";
+                    if (state.Board[j][i - 2] < 10)
+                        append = "|   " + state.Board[j][i - 2] + "  ";
+                    else if (state.Board[j][i - 2] >= 10 && state.Board[j][i - 2] < 100)
+                        append = "|  " + state.Board[j][i - 2] + "  ";
+                    else if (state.Board[j][i - 2] >= 100 && state.Board[j][i - 2] < 1000)
+                        append = "|  " + state.Board[j][i - 2] + " ";
+                    else if (state.Board[j][i - 2] >= 1000 && state.Board[j][i - 2] < 10000)
+                        append = "| " + state.Board[j][i - 2] + " ";
 
                     line += append;
                     if (j == 3)

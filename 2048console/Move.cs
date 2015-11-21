@@ -14,6 +14,7 @@ namespace _2048console
         UP = 3
     }
 
+    // Class representing a move
     public class Move 
     {
         private double score;
@@ -34,6 +35,8 @@ namespace _2048console
         }
     }
 
+    // Subclass of move, representing a move made by the computer,
+    // i.e. an insertion of a random tile at a random position
     public class ComputerMove : Move
     {
         private Tuple<int, int> position;
@@ -76,6 +79,8 @@ namespace _2048console
         }
     }
 
+    // Subclass of move, representing a move made by the player,
+    // i.e. a swipe direction (left, right, up, down)
     public class PlayerMove : Move
     {
         private DIRECTION direction;

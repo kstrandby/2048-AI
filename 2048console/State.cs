@@ -2,24 +2,28 @@
 using System.Collections.Generic;
 namespace _2048console
 {
-    // State class
+    // State class, representing a state of the game based
+    // on the configuration of the board, the amount of points
+    // and the player that has the move in the state
     public class State
     {
         private Random random;
 
-        private int[][] grid;
-        public int[][] Grid
+        // Board representation
+        private int[][] board;
+        public int[][] Board
         {
             get
             {
-                return this.grid;
+                return this.board;
             }
             set
             {
-                this.grid = value;
+                this.board = value;
             }
         }
 
+        // Amount of points in state
         private int points;
         public int Points
         {
@@ -33,6 +37,7 @@ namespace _2048console
             }
         }
 
+        // Player to play in the state
         private int player;
         public int Player {
             get
@@ -45,6 +50,7 @@ namespace _2048console
             }
         }
 
+        // Move generating this state
         private Move generatingMove;
         public Move GeneratingMove
         {
@@ -59,20 +65,22 @@ namespace _2048console
         }
 
 
-        public State(int[][] grid, int points, int turn)
+        public State(int[][] board, int points, int turn)
         {
-            this.grid = grid;
+            this.board = board;
             this.points = points;
             this.player = turn;
 
              random = new Random();
         }
 
+        // Returns a clone of the state
         public State Clone()
         {
-            return new State(GridHelper.CloneGrid(this.grid), this.points, this.player);
+            return new State(BoardHelper.CloneBoard(this.board), this.points, this.player);
         }
 
+        // Returns a random move available in the state
         public Move GetRandomMove()
         {
             List<Move> moves = GetMoves();
@@ -80,9 +88,9 @@ namespace _2048console
             return moves[randomIndex];
         }
 
+        // Checks if two states are equal
         public override bool Equals(System.Object obj)
         {
-
             if (obj == null)
             {
                 return false;
@@ -98,13 +106,14 @@ namespace _2048console
             {
                 for (int j = 0; j < GameEngine.COLUMNS; j++)
                 {
-                    if (grid[i][j] != s.grid[i][j])
+                    if (board[i][j] != s.board[i][j])
                         return false;
                 }
             }
             return true;
         }
 
+        // Checks if two states are equal
         public bool Equals(State s)
         {
             if ((object)s == null)
@@ -115,7 +124,7 @@ namespace _2048console
             {
                 for (int j = 0; j < GameEngine.COLUMNS; j++)
                 {
-                    if (grid[i][j] != s.grid[i][j])
+                    if (board[i][j] != s.board[i][j])
                         return false;
                 }
             }
@@ -125,7 +134,7 @@ namespace _2048console
         // for good practice recommended by Microsoft
         public override int GetHashCode()
         {
-            return grid.GetHashCode() * points;
+            return board.GetHashCode() * points;
         }
 
         // Used by MCTS (only called for terminal states)
@@ -137,7 +146,7 @@ namespace _2048console
         // checks if the state is a winning state (has tile 2048)
         public bool IsWin()
         {
-            if (GridHelper.HighestTile(grid) >= 2048)
+            if (BoardHelper.HighestTile(board) >= 2048)
                 return true;
             else
                 return false;
@@ -146,10 +155,10 @@ namespace _2048console
         // checks if the state is a game over state
         public  bool IsGameOver()
         {
-            if (GridHelper.CheckLeft(grid) || GridHelper.CheckRight(grid) || GridHelper.CheckUp(grid) || GridHelper.CheckDown(grid))
-                return false;
-            else
+            if (BoardHelper.IsGameOver(board))
                 return true;
+            else
+                return false;
         }
 
         // returns all available moves in the state; will be computer moves if the computer is next to move in this state,
@@ -171,7 +180,7 @@ namespace _2048console
             }
         }
         // returns a list of all the possible actions the computer can take
-        // an action for the computer will be adding a 2- or 4- tile to some cell on the grid
+        // an action for the computer will be adding a 2- or 4- tile to some cell on the board
         public List<Move> GetAllComputerMoves(List<Cell> cells)
         {
             List<Move> moves = new List<Move>();
@@ -193,22 +202,22 @@ namespace _2048console
         {
             List<Move> moves = new List<Move>();
             
-            if (GridHelper.CheckLeft(grid))
+            if (BoardHelper.CheckLeft(board))
             {
                 Move move = new PlayerMove(DIRECTION.LEFT);
                 moves.Add(move);
             }
-            if (GridHelper.CheckRight(grid))
+            if (BoardHelper.CheckRight(board))
             {
                 Move move = new PlayerMove(DIRECTION.RIGHT);
                 moves.Add(move);
             }
-            if (GridHelper.CheckDown(grid))
+            if (BoardHelper.CheckDown(board))
             {
                 Move move = new PlayerMove(DIRECTION.DOWN);
                 moves.Add(move);
             }
-            if (GridHelper.CheckUp(grid))
+            if (BoardHelper.CheckUp(board))
             {
                 Move move = new PlayerMove(DIRECTION.UP);
                 moves.Add(move);
@@ -220,11 +229,11 @@ namespace _2048console
         public List<Cell> GetAvailableCells()
         {
             List<Cell> cells = new List<Cell>();
-            for (int i = 0; i < grid.Length; i++)
+            for (int i = 0; i < board.Length; i++)
             {
-                for (int j = 0; j < grid.Length; j++)
+                for (int j = 0; j < board.Length; j++)
                 {
-                    if (grid[i][j] == 0)
+                    if (board[i][j] == 0)
                         cells.Add(new Cell(i, j));
                 }
             }
@@ -236,25 +245,25 @@ namespace _2048console
         {
             if (move is PlayerMove)
             {
-                int[][] clonedGrid = GridHelper.CloneGrid(this.grid);
+                int[][] clonedBoard = BoardHelper.CloneBoard(this.board);
                 if (((PlayerMove)move).Direction == DIRECTION.LEFT){
-                    State state = ApplyLeft(clonedGrid);
+                    State state = ApplyLeft(clonedBoard);
                     state.GeneratingMove = move;
                     return state;
                 }
                 else if (((PlayerMove)move).Direction == DIRECTION.RIGHT) {
-                    State state = ApplyRight(clonedGrid);
+                    State state = ApplyRight(clonedBoard);
                     state.GeneratingMove = move;
                     return state;
                 }
                     
                 else if (((PlayerMove)move).Direction == DIRECTION.DOWN) {
-                    State state = ApplyDown(clonedGrid);
+                    State state = ApplyDown(clonedBoard);
                     state.GeneratingMove = move;
                     return state;
                 }
                 else if (((PlayerMove)move).Direction == DIRECTION.UP) {
-                    State state = ApplyUp(clonedGrid);
+                    State state = ApplyUp(clonedBoard);
                     state.GeneratingMove = move;
                     return state;
                 }
@@ -262,11 +271,11 @@ namespace _2048console
             }
             else if (move is ComputerMove)
             {
-                State result = new State(GridHelper.CloneGrid(this.grid), points, GameEngine.PLAYER);
+                State result = new State(BoardHelper.CloneBoard(this.board), points, GameEngine.PLAYER);
                 int xPosition = ((ComputerMove)move).Position.Item1;
                 int yPosition = ((ComputerMove)move).Position.Item2;
                 int tileValue = ((ComputerMove)move).Tile;
-                result.Grid[xPosition][yPosition] = tileValue;
+                result.Board[xPosition][yPosition] = tileValue;
                 result.GeneratingMove = move;
                 return result;
             }
@@ -276,114 +285,114 @@ namespace _2048console
             }
         }
 
-        private State ApplyUp(int[][] clonedGrid)
+        private State ApplyUp(int[][] clonedBoard)
         {
             List<Cell> merged = new List<Cell>();
 
-            for (int i = 0; i < clonedGrid.Length; i++)
+            for (int i = 0; i < clonedBoard.Length; i++)
             {
-                for (int j = clonedGrid.Length - 1; j >= 0; j--)
+                for (int j = clonedBoard.Length - 1; j >= 0; j--)
                 {
-                    if (GridHelper.CellIsOccupied(clonedGrid, i, j) && j < 3)
+                    if (BoardHelper.CellIsOccupied(clonedBoard, i, j) && j < 3)
                     {
                         int k = j;
-                        while (k < 3 && !GridHelper.CellIsOccupied(clonedGrid, i, k + 1))
+                        while (k < 3 && !BoardHelper.CellIsOccupied(clonedBoard, i, k + 1))
                         {
-                            int value = clonedGrid[i][k];
-                            clonedGrid[i][k] = 0;
-                            clonedGrid[i][k + 1] = value;
+                            int value = clonedBoard[i][k];
+                            clonedBoard[i][k] = 0;
+                            clonedBoard[i][k + 1] = value;
                             k = k + 1;
                         }
-                        if (k < 3 && GridHelper.CellIsOccupied(clonedGrid, i, k + 1) 
-                            && !GridHelper.TileAlreadyMerged(merged, i, k)
-                            && !GridHelper.TileAlreadyMerged(merged, i, k + 1))
+                        if (k < 3 && BoardHelper.CellIsOccupied(clonedBoard, i, k + 1) 
+                            && !BoardHelper.TileAlreadyMerged(merged, i, k)
+                            && !BoardHelper.TileAlreadyMerged(merged, i, k + 1))
                         {
                             // check if we can merge the two tiles
-                            if (clonedGrid[i][k] == clonedGrid[i][k + 1])
+                            if (clonedBoard[i][k] == clonedBoard[i][k + 1])
                             {
-                                int value = clonedGrid[i][k + 1] * 2;
-                                clonedGrid[i][k + 1] = value;
+                                int value = clonedBoard[i][k + 1] * 2;
+                                clonedBoard[i][k + 1] = value;
                                 merged.Add(new Cell(i, k + 1));
-                                clonedGrid[i][k] = 0;
+                                clonedBoard[i][k] = 0;
                                 points += value;
                             }
                         }
                     }
                 }
             }
-            State result = new State(clonedGrid, this.points, GameEngine.COMPUTER);
+            State result = new State(clonedBoard, this.points, GameEngine.COMPUTER);
             return result;
         }
 
-        private State ApplyDown(int[][] clonedGrid)
+        private State ApplyDown(int[][] clonedBoard)
         {
             List<Cell> merged = new List<Cell>();
 
-            for (int i = 0; i < grid.Length; i++)
+            for (int i = 0; i < board.Length; i++)
             {
-                for (int j = 0; j < grid.Length; j++)
+                for (int j = 0; j < board.Length; j++)
                 {
-                    if (GridHelper.CellIsOccupied(clonedGrid, i, j) && j > 0)
+                    if (BoardHelper.CellIsOccupied(clonedBoard, i, j) && j > 0)
                     {
                         int k = j;
-                        while (k > 0 && !GridHelper.CellIsOccupied(clonedGrid, i, k - 1))
+                        while (k > 0 && !BoardHelper.CellIsOccupied(clonedBoard, i, k - 1))
                         {
-                            int value = clonedGrid[i][k];
-                            clonedGrid[i][k] = 0;
-                            clonedGrid[i][k - 1] = value;
+                            int value = clonedBoard[i][k];
+                            clonedBoard[i][k] = 0;
+                            clonedBoard[i][k - 1] = value;
                             k = k - 1;
                         }
-                        if (k > 0 && GridHelper.CellIsOccupied(clonedGrid, i, k - 1)
-                            && !GridHelper.TileAlreadyMerged(merged, i, k)
-                            && !GridHelper.TileAlreadyMerged(merged, i, k - 1))
+                        if (k > 0 && BoardHelper.CellIsOccupied(clonedBoard, i, k - 1)
+                            && !BoardHelper.TileAlreadyMerged(merged, i, k)
+                            && !BoardHelper.TileAlreadyMerged(merged, i, k - 1))
                         {
                             // check if we can merge the two tiles
-                            if (clonedGrid[i][k] == clonedGrid[i][k - 1])
+                            if (clonedBoard[i][k] == clonedBoard[i][k - 1])
                             {
-                                int value = clonedGrid[i][k - 1] * 2;
-                                clonedGrid[i][k - 1] = value;
+                                int value = clonedBoard[i][k - 1] * 2;
+                                clonedBoard[i][k - 1] = value;
                                 merged.Add(new Cell(i, k - 1));
-                                clonedGrid[i][k] = 0;
+                                clonedBoard[i][k] = 0;
                                 points += value;
                             }
                         }
                     }
                 }
             }
-            State result = new State(clonedGrid, this.points, GameEngine.COMPUTER);
+            State result = new State(clonedBoard, this.points, GameEngine.COMPUTER);
             return result;
         }
 
-        private State ApplyRight(int[][] clonedGrid)
+        private State ApplyRight(int[][] clonedBoard)
         {
 
             List<Cell> merged = new List<Cell>();
 
-            for (int j = 0; j < grid.Length; j++)
+            for (int j = 0; j < board.Length; j++)
             {
-                for (int i = grid.Length - 1; i >= 0; i--)
+                for (int i = board.Length - 1; i >= 0; i--)
                 {
-                    if (GridHelper.CellIsOccupied(clonedGrid, i, j) && i < 3)
+                    if (BoardHelper.CellIsOccupied(clonedBoard, i, j) && i < 3)
                     {
                         int k = i;
-                        while (k < 3 && !GridHelper.CellIsOccupied(clonedGrid, k + 1, j))
+                        while (k < 3 && !BoardHelper.CellIsOccupied(clonedBoard, k + 1, j))
                         {
-                            int value = clonedGrid[k][j];
-                            clonedGrid[k][j] = 0;
-                            clonedGrid[k + 1][j] = value;
+                            int value = clonedBoard[k][j];
+                            clonedBoard[k][j] = 0;
+                            clonedBoard[k + 1][j] = value;
                             k = k + 1;
                         }
-                        if (k < 3 && GridHelper.CellIsOccupied(clonedGrid, k + 1, j) 
-                            && !GridHelper.TileAlreadyMerged(merged, k, j) 
-                            && !GridHelper.TileAlreadyMerged(merged, k + 1, j))
+                        if (k < 3 && BoardHelper.CellIsOccupied(clonedBoard, k + 1, j) 
+                            && !BoardHelper.TileAlreadyMerged(merged, k, j) 
+                            && !BoardHelper.TileAlreadyMerged(merged, k + 1, j))
                         {
                             // check if we can merge the two tiles
-                            if (clonedGrid[k][j] == clonedGrid[k + 1][j])
+                            if (clonedBoard[k][j] == clonedBoard[k + 1][j])
                             {
-                                int value = clonedGrid[k + 1][j] * 2;
-                                clonedGrid[k + 1][j] = value;
+                                int value = clonedBoard[k + 1][j] * 2;
+                                clonedBoard[k + 1][j] = value;
                                 merged.Add(new Cell(k + 1, j));
-                                clonedGrid[k][j] = 0;
+                                clonedBoard[k][j] = 0;
                                 points += value;
                             }
                         }
@@ -391,39 +400,39 @@ namespace _2048console
                 }
             }
 
-            State result = new State(clonedGrid, this.points, GameEngine.COMPUTER);
+            State result = new State(clonedBoard, this.points, GameEngine.COMPUTER);
             return result;
         }
 
-        private State ApplyLeft(int[][] clonedGrid)
+        private State ApplyLeft(int[][] clonedBoard)
         {
             List<Cell> merged = new List<Cell>();
 
-            for (int j = 0; j < grid.Length; j++)
+            for (int j = 0; j < board.Length; j++)
             {
-                for (int i = 0; i < grid.Length; i++)
+                for (int i = 0; i < board.Length; i++)
                 {
-                    if (GridHelper.CellIsOccupied(clonedGrid, i, j) && i > 0)
+                    if (BoardHelper.CellIsOccupied(clonedBoard, i, j) && i > 0)
                     {
                         int k = i;
-                        while (k > 0 && !GridHelper.CellIsOccupied(clonedGrid, k - 1, j))
+                        while (k > 0 && !BoardHelper.CellIsOccupied(clonedBoard, k - 1, j))
                         {
-                            int value = clonedGrid[k][j];
-                            clonedGrid[k][j] = 0;
-                            clonedGrid[k - 1][j] = value;
+                            int value = clonedBoard[k][j];
+                            clonedBoard[k][j] = 0;
+                            clonedBoard[k - 1][j] = value;
                             k = k - 1;
                         }
-                        if (k > 0 && GridHelper.CellIsOccupied(clonedGrid, k - 1, j) 
-                            && !GridHelper.TileAlreadyMerged(merged, k, j)
-                            && !GridHelper.TileAlreadyMerged(merged, k - 1, j))
+                        if (k > 0 && BoardHelper.CellIsOccupied(clonedBoard, k - 1, j) 
+                            && !BoardHelper.TileAlreadyMerged(merged, k, j)
+                            && !BoardHelper.TileAlreadyMerged(merged, k - 1, j))
                         {
                             // check if we can merge the two tiles
-                            if (clonedGrid[k][j] == clonedGrid[k - 1][j])
+                            if (clonedBoard[k][j] == clonedBoard[k - 1][j])
                             {
-                                int value = clonedGrid[k - 1][j] * 2;
-                                clonedGrid[k - 1][j] = value;
+                                int value = clonedBoard[k - 1][j] * 2;
+                                clonedBoard[k - 1][j] = value;
                                 merged.Add(new Cell(k - 1, j));
-                                clonedGrid[k][j] = 0;
+                                clonedBoard[k][j] = 0;
                                 points += value;
                             }
                         }
@@ -431,7 +440,7 @@ namespace _2048console
                 }
             }
 
-            State result = new State(clonedGrid, this.points, GameEngine.COMPUTER);
+            State result = new State(clonedBoard, this.points, GameEngine.COMPUTER);
             return result;
         }
     }

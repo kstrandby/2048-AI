@@ -9,167 +9,125 @@ using System.Threading.Tasks;
 
 namespace _2048console
 {
-    public class MonteCarlo
+    // class used for monte carlo tree searches
+    class MonteCarlo
     {
-        GameEngine gameEngine;
-        int simulations;
-        double c; // constant used for UCT
-        Random random;
-        public static Dictionary<int, int> minPoints = new Dictionary<int, int>
-        {
-            {512, 4608},
-            {1024, 10240},
-            {2048, 22528},
-            {4096, 53248},
-            {8192, 106494}
-        };
+        // Constants for default policy
+        private const int DEFAULT_POLICY = RANDOM_POLICY;
+        
+        private const int RANDOM_POLICY = 1;
 
-        // stats
-        public StreamWriter writer;
+        private GameEngine gameEngine;
+        private Random random;
 
-        public MonteCarlo(GameEngine gameEngine, int simulations, double constant)
+        public MonteCarlo(GameEngine gameEngine)
         {
             this.gameEngine = gameEngine;
-            this.simulations = simulations;
-            this.c = constant;
             this.random = new Random();
-            //writer = new StreamWriter(@"C:\Users\Kristine\Documents\Visual Studio 2013\Projects\2048console\MCTSNumThreadsTest.txt", true);
         }
 
-        public State Run(bool print)
+        public State RunIterationLimitedMCTS(bool print, int iterationLimit)
         {
             State rootState = null;
-            
+
             while (true)
             {
-                
+                rootState = new State(BoardHelper.CloneBoard(this.gameEngine.board), this.gameEngine.scoreController.getScore(), GameEngine.PLAYER);
 
-                rootState = new State(GridHelper.CloneGrid(this.gameEngine.grid), this.gameEngine.scoreController.getScore(), GameEngine.PLAYER);
+                if (print)
+                {
+                    Program.PrintState(rootState);
+                }
 
-                //DIRECTION result = RootParallelizationMCTS(rootState, this.simulations, 8);
-                DIRECTION result = RootParallelizationMCTSTimeLimited(rootState, 100, 8);
+
+                Node result = IterationLimitedMCTS(rootState, iterationLimit);
+                if (result == null)
+                {
+                    // game over
+                    return rootState;
+                }
+                gameEngine.SendUserAction((PlayerMove)result.GeneratingMove);
+            }
+        }
+
+        public State RunTimeLimitedMCTS(bool print, int timeLimit)
+        {
+            State rootState = null;
+
+            while (true)
+            {
+                rootState = new State(BoardHelper.CloneBoard(this.gameEngine.board), this.gameEngine.scoreController.getScore(), GameEngine.PLAYER);
+
+                if (print)
+                {
+                    Program.PrintState(rootState);
+                }
+
+
+                Node result = TimeLimitedMCTS(rootState, timeLimit);
+                if (result == null)
+                {
+                    // game over
+                    return rootState;
+                }
+                gameEngine.SendUserAction((PlayerMove)result.GeneratingMove);
+            }
+        }
+
+        public State RunRootParallelizationIterationLimitedMCTS(bool print, int iterationLimit, int numThreads)
+        {
+            State rootState = null;
+
+            while (true)
+            {
+                rootState = new State(BoardHelper.CloneBoard(this.gameEngine.board), this.gameEngine.scoreController.getScore(), GameEngine.PLAYER);
+
+                if (print)
+                {
+                    Program.PrintState(rootState);
+                }
+                DIRECTION result = RootParallelizationMCTS(rootState, iterationLimit, numThreads);
                 PlayerMove move = new PlayerMove();
                 move.Direction = result;
                 if (result == (DIRECTION)(-1))
                 {
                     // game over
-                    Console.WriteLine("GAME OVER, final score = " + gameEngine.scoreController.getScore());
                     return rootState;
                 }
                 gameEngine.SendUserAction(move);
+            }
+        }
 
-                //Node result = MCTS(rootState, this.simulations);
-                //if (result == null)
-                //{
-                //    // game over
-                //    Console.WriteLine("GAME OVER, final score = " + gameEngine.scoreController.getScore());
-                //    //writer.Close();
-                //    return rootState;
-                //}
-                //gameEngine.SendUserAction((PlayerMove)result.GeneratingMove);
+        public State RunRootParallelizationTimeLimitedMCTS(bool print, int timeLimit, int numThreads)
+        {
+            State rootState = null;
+
+            while (true)
+            {
+                rootState = new State(BoardHelper.CloneBoard(this.gameEngine.board), this.gameEngine.scoreController.getScore(), GameEngine.PLAYER);
 
                 if (print)
                 {
-                    Program.CleanConsole();
-                    Console.SetCursorPosition(0, 0);
-                    Console.WriteLine(GridHelper.ToString(rootState.Grid));
+                    Program.PrintState(rootState);
                 }
-            
+                DIRECTION result = RootParallelizationMCTSTimeLimited(rootState, timeLimit, numThreads);
+                PlayerMove move = new PlayerMove();
+                move.Direction = result;
+                if (result == (DIRECTION)(-1))
+                {
+                    // game over
+                    return rootState;
+                }
+                gameEngine.SendUserAction(move);
             }
-            
         }
 
-        public DIRECTION RootParallelizationMCTSTimeLimited(State rootState, int timeLimit, int numOfThreads)
-        {
-            ConcurrentBag<Node> allChildren = new ConcurrentBag<Node>();
-            int numOfChildren = rootState.GetMoves().Count;
-
-            Stopwatch timer = new Stopwatch();
-            timer.Start();
-            Parallel.For(0, numOfThreads, i =>
-            {
-                Node resultRoot = TimeLimitedMCTS(rootState, timeLimit, timer);
-                foreach (Node child in resultRoot.Children)
-                {
-                    allChildren.Add(child);
-                }
-            });
-            timer.Stop();
-
-            List<int> totalVisits = new List<int>(4) { 0, 0, 0, 0 };
-            List<double> totalResults = new List<double>(4) { 0, 0, 0, 0 };
-
-            foreach (Node child in allChildren)
-            {
-                int direction = (int)((PlayerMove)child.GeneratingMove).Direction;
-                totalVisits[direction] += child.Visits;
-                totalResults[direction] += child.Results;
-            }
-
-            double best = Double.MinValue;
-            int bestDirection = -1;
-            for (int k = 0; k < 4; k++)
-            {
-
-                double avg = totalResults[k] / totalVisits[k];
-                if (avg > best)
-                {
-                    best = avg;
-                    bestDirection = k;
-                }
-
-            }
-
-            if (bestDirection == -1) return (DIRECTION)(-1);
-            return (DIRECTION)bestDirection;
-        }
-
-        private Node TimeLimitedMCTS(State rootState, int timeLimit, Stopwatch timer)
-        {
-            Node rootNode = new Node(null, null, rootState);
-            int count = 0;
-            while(timer.ElapsedMilliseconds < timeLimit)
-            {
-                Node node = rootNode;
-                State state = rootState.Clone();
-
-                // 1: Select
-                while (node.UntriedMoves.Count == 0 && node.Children.Count != 0)
-                {
-                    node = node.SelectChild();
-                    state = state.ApplyMove(node.GeneratingMove);
-                }
-
-                // 2: Expand
-                if (node.UntriedMoves.Count != 0)
-                {
-                    Move randomMove = node.UntriedMoves[random.Next(0, node.UntriedMoves.Count)];
-                    state = state.ApplyMove(randomMove);
-                    node = node.AddChild(randomMove, state);
-                }
-
-
-
-                // 3: Simulation
-                while (state.GetMoves().Count != 0)
-                {
-                    state = state.ApplyMove(state.GetRandomMove());
-                }
-                // state = SimulateGame(state);
-
-
-                // 4: Backpropagation
-                while (node != null)
-                {
-                    node.Update(state.GetResult());
-                    node = node.Parent;
-                }
-                count++;
-            }
-            //Console.WriteLine(count + " simulations");
-            return rootNode;
-        }
-
+        // Runs a root-parallelized Monte Carlo Tree Search
+        // The root parallelization basically means that separate searches are started in separate threads
+        // from the root
+        // For each thread, the search runs for the same number of iterations, given as input
+        // When each thread has finished, the results are combined and the best child node is found based on
+        // the combined results
         public DIRECTION RootParallelizationMCTS(State rootState, int iterations, int numOfThreads)
         {
             ConcurrentBag<Node> allChildren = new ConcurrentBag<Node>();
@@ -177,7 +135,7 @@ namespace _2048console
             
             Parallel.For(0, numOfThreads, i =>
             {
-                Node resultRoot = MonteCarloTreeSearch(rootState, iterations);
+                Node resultRoot = IterationLimited(rootState, iterations);
                 foreach (Node child in resultRoot.Children)
                 {
                     allChildren.Add(child);
@@ -207,19 +165,114 @@ namespace _2048console
                 }
 
             }
-
             if (bestDirection == -1) return (DIRECTION)(-1);
             return (DIRECTION)bestDirection;
         }
 
-        public Node MCTS(State rootState, int iterations)
+        // Runs a root-parallelized Monte Carlo Tree Search in the same way as the RootParallelizationMCTS,
+        // but limited by a time limit instead of number of iterations
+        public DIRECTION RootParallelizationMCTSTimeLimited(State rootState, int timeLimit, int numOfThreads)
         {
-            Node rootNode = MonteCarloTreeSearch(rootState, iterations);
+            ConcurrentBag<Node> allChildren = new ConcurrentBag<Node>();
+            int numOfChildren = rootState.GetMoves().Count;
+
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
+            Parallel.For(0, numOfThreads, i =>
+            {
+                Node resultRoot = TimeLimited(rootState, timeLimit, timer);
+                foreach (Node child in resultRoot.Children)
+                {
+                    allChildren.Add(child);
+                }
+            });
+            timer.Stop();
+
+            List<int> totalVisits = new List<int>(4) { 0, 0, 0, 0 };
+            List<double> totalResults = new List<double>(4) { 0, 0, 0, 0 };
+
+            foreach (Node child in allChildren)
+            {
+                int direction = (int)((PlayerMove)child.GeneratingMove).Direction;
+                totalVisits[direction] += child.Visits;
+                totalResults[direction] += child.Results;
+            }
+
+            double best = Double.MinValue;
+            int bestDirection = -1;
+            for (int k = 0; k < 4; k++)
+            {
+                double avg = totalResults[k] / totalVisits[k];
+                if (avg > best)
+                {
+                    best = avg;
+                    bestDirection = k;
+                }
+            }
+            if (bestDirection == -1) return (DIRECTION)(-1);
+            return (DIRECTION)bestDirection;
+        }
+
+        // Starts the iteration limited Monte Carlo Tree Search and returns the best child node
+        // resulting from the search
+        public Node IterationLimitedMCTS(State rootState, int iterations)
+        {
+            Node rootNode = IterationLimited(rootState, iterations);
             Node bestNode = FindBestChild(rootNode.Children);
             return bestNode;
         }
 
-        public Node MonteCarloTreeSearch(State rootState, int iterations)
+        // Starts the time limited Monte Carlo Tree Search and returns the best child node
+        // resulting from the search
+        public Node TimeLimitedMCTS(State rootState, int timeLimit)
+        {
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
+            Node rootNode = TimeLimited(rootState, timeLimit, timer);
+            Node bestNode = FindBestChild(rootNode.Children);
+            return bestNode;
+        }
+
+        // Runs a Monte Carlo Tree Search limited by a given time limit
+        private Node TimeLimited(State rootState, int timeLimit, Stopwatch timer)
+        {
+            Node rootNode = new Node(null, null, rootState);
+            while (timer.ElapsedMilliseconds < timeLimit)
+            {
+                Node node = rootNode;
+                State state = rootState.Clone();
+
+                // 1: Select
+                while (node.UntriedMoves.Count == 0 && node.Children.Count != 0)
+                {
+                    node = node.SelectChild();
+                    state = state.ApplyMove(node.GeneratingMove);
+                }
+
+                // 2: Expand
+                if (node.UntriedMoves.Count != 0)
+                {
+                    Move randomMove = node.UntriedMoves[random.Next(0, node.UntriedMoves.Count)];
+                    state = state.ApplyMove(randomMove);
+                    node = node.AddChild(randomMove, state);
+                }
+
+                // 3: Simulation
+                state = SimulateGame(state);
+
+                // 4: Backpropagation
+                while (node != null)
+                {
+                    node.Update(state.GetResult());
+                    node = node.Parent;
+                }
+            }
+            return rootNode;
+        }
+
+        // Runs a Monte Carlo Tree Search from the given root node
+        // Limited by number of iterations
+        public Node IterationLimited(State rootState, int iterations)
         {
             Node rootNode = new Node(null, null, rootState);
 
@@ -243,15 +296,8 @@ namespace _2048console
                     node = node.AddChild(randomMove, state);
                 }
 
-
-
                 // 3: Simulation
-                while (state.GetMoves().Count != 0)
-                {
-                    state = state.ApplyMove(state.GetRandomMove());
-                }
-               // state = SimulateGame(state);
-
+                state = SimulateGame(state);
 
                 // 4: Backpropagation
                 while (node != null)
@@ -260,60 +306,26 @@ namespace _2048console
                     node = node.Parent;
                 }
             }
-            return rootNode;
-            
+            return rootNode; 
         }
 
+        // Simulates a game to the end (game over) based on the default policy
+        // Returns the game over state
         private State SimulateGame(State state)
         {
-            List<Move> moves = state.GetMoves();
-
-            while (moves.Count != 0)
+            if (DEFAULT_POLICY == RANDOM_POLICY)
             {
-                if (moves.Count == 1)
+                while (state.GetMoves().Count != 0)
                 {
-                    state = state.ApplyMove(moves[0]);
+                    state = state.ApplyMove(state.GetRandomMove());
                 }
-                else
-                {
-                    if (state.Player == GameEngine.PLAYER)
-                    {
-                        Move down = moves.Find(x => ((PlayerMove)x).Direction == DIRECTION.DOWN);
-                        if (down != null)
-                        {
-                            state = state.ApplyMove(down);
-                        }
-                        else
-                        {
-                            Move left = moves.Find(x => ((PlayerMove)x).Direction == DIRECTION.LEFT);
-                            if (left != null)
-                            {
-                                state = state.ApplyMove(left);
-                            }
-                            else
-                            {
-                                Move right = moves.Find(x => ((PlayerMove)x).Direction == DIRECTION.RIGHT);
-                                if (right != null)
-                                {
-                                    state = state.ApplyMove(right);
-                                }
-
-                            }
-                        }
-
-                    }
-                    else
-                    {
-                        state = state.ApplyMove(state.GetRandomMove());
-                    }
-                }
-                moves = state.GetMoves();
-               
+                return state;
             }
-            return state;
+            else throw new Exception();
         }
 
-        // best child is node with most wins - can be tweaked to use most visits (should be the same) or other strategy
+        // Called at the end of a MCTS to decide on the best child
+        // Best child is the child with the highest average score
         private Node FindBestChild(List<Node> children)
         {
 

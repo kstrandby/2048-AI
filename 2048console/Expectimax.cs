@@ -10,12 +10,12 @@ using System.Threading.Tasks;
 
 namespace _2048console
 {
+    // class used for expectimax searches
     class Expectimax
     {
 
         private GameEngine gameEngine;
-        public ScoreController scoreController;
-
+        private ScoreController scoreController;
         private int chosenDepth;
         private State currentState;
 
@@ -28,48 +28,124 @@ namespace _2048console
 
         private int evaluatedStates;
 
-        public State Run(bool print)
+        public State RunClassicExpectimax(bool print)
         {
-            // main game loop
             while (true)
             {
-
                 // update state
-                currentState = new State(GridHelper.CloneGrid(gameEngine.grid), scoreController.getScore(), GameEngine.PLAYER);
+                currentState = new State(BoardHelper.CloneBoard(gameEngine.board), scoreController.getScore(), GameEngine.PLAYER);
 
                 if (print)
                 {
-                    Program.CleanConsole();
-                    Console.SetCursorPosition(0, 0);
-                    Console.WriteLine(GridHelper.ToString(currentState.Grid));
+                    Program.PrintState(currentState);
                 }
 
                 // run algorithm and send action choice to game engine
-                //Move move = Star2Expectimax(currentState, AI.GetLowerBound(), AI.GetUpperBound(), chosenDepth);
-                //Move move = Star1Expectimax(currentState, Double.MinValue, Double.MaxValue, chosenDepth);
-                //Move move = ParallelExpectimax(currentState, chosenDepth);
-                //Move move1 = IterativeDeepening(currentState, 100);
-                //Move move = ThreadingStar1(currentState, chosenDepth);
-                Move move = ParallelIterativeDeepeningExpectimax(currentState, 100);
-
-                
+                Move move = ExpectimaxAlgorithm(currentState, chosenDepth);
                 if (((PlayerMove)move).Direction == (DIRECTION)(-1))
                 {
                     // game over
-                    Console.WriteLine("GAME OVER, final score = " + scoreController.getScore());
                     return currentState;
                 }
                 gameEngine.SendUserAction((PlayerMove)move);
-
-                if (print)
-                {
-                    Program.CleanConsole();
-                    Console.SetCursorPosition(0, 0);
-                    Console.WriteLine(GridHelper.ToString(currentState.Grid));
-                }
             }
         }
 
+
+        public State RunStar1Expectimax(bool print)
+        {
+            while (true)
+            {
+                // update state
+                currentState = new State(BoardHelper.CloneBoard(gameEngine.board), scoreController.getScore(), GameEngine.PLAYER);
+
+                if (print)
+                {
+                    Program.PrintState(currentState);
+                }
+
+                // run algorithm and send action choice to game engine
+                Move move = Star1Expectimax(currentState, Double.MinValue, Double.MaxValue, chosenDepth);
+                if (((PlayerMove)move).Direction == (DIRECTION)(-1))
+                {
+                    // game over
+                    return currentState;
+                }
+                gameEngine.SendUserAction((PlayerMove)move);
+            }
+        }
+
+        public State RunParallelClassicExpectimax(bool print)
+        {
+            while (true)
+            {
+                // update state
+                currentState = new State(BoardHelper.CloneBoard(gameEngine.board), scoreController.getScore(), GameEngine.PLAYER);
+
+                if (print)
+                {
+                    Program.PrintState(currentState);
+                }
+
+                // run algorithm and send action choice to game engine
+                Move move = ParallelExpectimax(currentState, chosenDepth);
+                if (((PlayerMove)move).Direction == (DIRECTION)(-1))
+                {
+                    // game over
+                    return currentState;
+                }
+                gameEngine.SendUserAction((PlayerMove)move);
+            }
+        }
+
+        public State RunIterativeDeepeningExpectimax(bool print, int timeLimit)
+        {
+            while (true)
+            {
+                // update state
+                currentState = new State(BoardHelper.CloneBoard(gameEngine.board), scoreController.getScore(), GameEngine.PLAYER);
+
+                if (print)
+                {
+                    Program.PrintState(currentState);
+                }
+
+                // run algorithm and send action choice to game engine
+                Move move = IterativeDeepening(currentState, timeLimit);
+                if (((PlayerMove)move).Direction == (DIRECTION)(-1))
+                {
+                    // game over
+                    return currentState;
+                }
+                gameEngine.SendUserAction((PlayerMove)move);
+            }
+        }
+
+        public State RunParallelIterativeDeepeningExpectimax(bool print, int timeLimit)
+        {
+            while (true)
+            {
+                // update state
+                currentState = new State(BoardHelper.CloneBoard(gameEngine.board), scoreController.getScore(), GameEngine.PLAYER);
+
+                if (print)
+                {
+                    Program.PrintState(currentState);
+                }
+
+                // run algorithm and send action choice to game engine
+                Move move = ParallelIterativeDeepeningExpectimax(currentState, timeLimit);
+                if (((PlayerMove)move).Direction == (DIRECTION)(-1))
+                {
+                    // game over
+                    return currentState;
+                }
+                gameEngine.SendUserAction((PlayerMove)move);
+            }
+        }
+
+        // Run Expectimax simulation from given state until game over state is reached
+        // returns the game over state
         public State RunFromState(State state) {
             
             State currentState = state;
@@ -86,12 +162,14 @@ namespace _2048console
                     currentState = currentState.ApplyMove(move);
                     currentState = currentState.ApplyMove(currentState.GetRandomMove());
                 }
-
             }
-
         }
 
-        // called only at the root, where depth will always be > 0 and player will always be player
+        // Runs a parallel expectimax search to speed up search
+        // A search is started in a separate thread for each child of the given root node
+        // This method should only be called for the the root, where depth will always 
+        // be > 0 and player will always be GameEngine.PLAYER - the recursion is started
+        // for the children of the root using standard Expectimax algorithm
         private Move ParallelExpectimax(State state, int depth)
         {
             Move bestMove = new PlayerMove();
@@ -113,6 +191,7 @@ namespace _2048console
                 resultingStates.Add(resultingState);
             }
 
+            // start a thread for each child
             Parallel.ForEach(resultingStates, resultingState =>
             {
                 double score = ExpectimaxAlgorithm(resultingState, depth - 1).Score;
@@ -133,7 +212,8 @@ namespace _2048console
 
         }
 
-        // called only at the root, where depth will always be > 0 and player will always be player
+        // Parallel version of Expectimax with Star1 pruning
+        // Only called at the root, where depth will always be > 0 and player will always be player
         private Move ThreadingStar1(State state, int depth)
         {
             Move bestMove = new PlayerMove();
@@ -175,6 +255,8 @@ namespace _2048console
             
         }
 
+        // Runs a parallel version of iterative deepening
+        // A search is started in a separate thread for each child of root node 
         private Move ParallelIterativeDeepeningExpectimax(State state, int timeLimit)
         {
             Move bestMove = new PlayerMove();
@@ -215,6 +297,7 @@ namespace _2048console
             return bestMove;
         }
 
+        // Iterative Deepening Expectimax search
         private Move IterativeDeepening(State state, double timeLimit)
         {
             int depth = 0;
@@ -230,10 +313,10 @@ namespace _2048console
                 
 
             }
-            //Console.WriteLine("Depth reaced in IDE: " + depth);
             return bestMove;
         }
 
+        // Recursive part of iterative deepening Expectimax
         private Tuple<Move, Boolean> IterativeDeepeningExpectimax(State state, int depth, double timeLimit, Stopwatch timer)
         {
             Move bestMove;
@@ -292,7 +375,7 @@ namespace _2048console
                 {
                     State resultingState = state.ApplyMove(move);
 
-                    average += StateProbability(resultingState, ((ComputerMove)move).Tile, availableCells.Count) * IterativeDeepeningExpectimax(resultingState, depth - 1, timeLimit, timer).Item1.Score;
+                    average += StateProbability(((ComputerMove)move).Tile) * IterativeDeepeningExpectimax(resultingState, depth - 1, timeLimit, timer).Item1.Score;
                     moveCheckedSoFar++;
                     if (timer.ElapsedMilliseconds > timeLimit)
                     {
@@ -307,8 +390,7 @@ namespace _2048console
 
         }
 
-        
-
+        // Classic Expectimax search
         private Move ExpectimaxAlgorithm(State state, int depth)
         {
             //evaluatedStates++;
@@ -361,7 +443,7 @@ namespace _2048console
                 {
                     State resultingState = state.ApplyMove(move);
 
-                    average += StateProbability(resultingState, ((ComputerMove)move).Tile, availableCells.Count) * ExpectimaxAlgorithm(resultingState, depth - 1).Score;
+                    average += StateProbability(((ComputerMove)move).Tile) * ExpectimaxAlgorithm(resultingState, depth - 1).Score;
                 }
                 bestMove.Score = average / moves.Count;
                 return bestMove;
@@ -369,7 +451,7 @@ namespace _2048console
             else throw new Exception();
         }
         
-
+        // Expectimax search with Star1 pruning
         private Move Star1Expectimax(State state, double alpha, double beta, int depth)
         {
             evaluatedStates++;
@@ -438,7 +520,7 @@ namespace _2048console
 
                     State resultingState = state.ApplyMove(move);
 
-                    double score = StateProbability(resultingState, ((ComputerMove)move).Tile, availableCells.Count) * Star1Expectimax(resultingState, sucAlpha, sucBeta, depth - 1).Score;
+                    double score = StateProbability(((ComputerMove)move).Tile) * Star1Expectimax(resultingState, sucAlpha, sucBeta, depth - 1).Score;
                     scoreSum += score;
                     if (score <= curAlpha)
                     {
@@ -464,13 +546,10 @@ namespace _2048console
 
             else throw new Exception();
         }
-
         
-
-
-        
-
-        private double StateProbability(State resultingState, int tileValue, int numAvailableCells)
+        // Given a tile value, returns the probability that a random tile generated by the
+        // computer will take this value
+        private double StateProbability(int tileValue)
         {
             if (tileValue == 2) // tile 2 spawn
             {
@@ -482,7 +561,6 @@ namespace _2048console
             }
             else throw new Exception();
         }
-
 
 
         // not used - way too slow
@@ -580,7 +658,7 @@ namespace _2048console
                     double sucBeta = Math.Min(curBeta, upperBound);
 
                     State resultingState = state.ApplyMove(move);
-                    double score = StateProbability(resultingState, ((ComputerMove)move).Tile, availableCells.Count) * Star2Expectimax(resultingState, sucAlpha, sucBeta, depth - 1).Score;
+                    double score = StateProbability(((ComputerMove)move).Tile) * Star2Expectimax(resultingState, sucAlpha, sucBeta, depth - 1).Score;
                     vsum += score;
 
                     if (score <= curAlpha)
@@ -608,9 +686,8 @@ namespace _2048console
             {
                 throw new Exception();
             }
-
-
         }
+
         private double Probe(State state, double alpha, double beta, int depth)
         {
 
@@ -650,5 +727,4 @@ namespace _2048console
             }
         }
     }   
-
 }
