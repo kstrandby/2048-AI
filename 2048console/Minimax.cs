@@ -163,6 +163,29 @@ namespace _2048console
             }
         }
 
+        public State RunParallelIterativeDeepeningAlphaBeta(bool print, int timeLimit)
+        {
+            while (true)
+            {
+                // update state
+                currentState = new State(BoardHelper.CloneBoard(gameEngine.board), scoreController.getScore(), GameEngine.PLAYER);
+
+                if (print)
+                {
+                    Program.PrintState(currentState);
+                }
+
+                // run algorithm and send action choice to game engine
+                Move move = ParallelIterativeDeepening(currentState, timeLimit);
+                if (((PlayerMove)move).Direction == (DIRECTION)(-1))
+                {
+                    // game over
+                    return currentState;
+                }
+                gameEngine.SendUserAction((PlayerMove)move);
+            }
+        }
+
         // Runs a parallel alpha-beta search
         // A search is started in a separate thread for each child node
         // Note that pruning is not done across threads
@@ -190,6 +213,48 @@ namespace _2048console
             Parallel.ForEach(resultingStates, resultingState =>
             {
                 double score = AlphaBeta(resultingState, depth - 1, alpha, beta).Score;
+                scores.Add(new Tuple<double, Move>(score, resultingState.GeneratingMove));
+            });
+            // find the best score
+            double highestScore = Double.MinValue;
+            foreach (Tuple<double, Move> score in scores)
+            {
+                PlayerMove move = (PlayerMove)score.Item2;
+                if (score.Item1 > highestScore)
+                {
+                    highestScore = score.Item1;
+                    bestMove = score.Item2;
+                }
+            }
+            return bestMove;
+        }
+
+        // Runs a parallel version of iterative deepening
+        // A search is started in a separate thread for each child of root node 
+        private Move ParallelIterativeDeepening(State state, double timeLimit)
+        {
+            Move bestMove = new PlayerMove();
+
+            List<Move> moves = state.GetMoves();
+            ConcurrentBag<Tuple<double, Move>> scores = new ConcurrentBag<Tuple<double, Move>>();
+
+            if (moves.Count == 0)
+            {
+                // game over
+                return bestMove;
+            }
+
+            // create the resulting states before starting the threads
+            List<State> resultingStates = new List<State>();
+            foreach (Move move in moves)
+            {
+                State resultingState = state.ApplyMove(move);
+                resultingStates.Add(resultingState);
+            }
+
+            Parallel.ForEach(resultingStates, resultingState =>
+            {
+                double score = IterativeDeepening(resultingState, timeLimit).Score;
                 scores.Add(new Tuple<double, Move>(score, resultingState.GeneratingMove));
             });
             // find the best score

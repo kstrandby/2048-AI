@@ -24,7 +24,7 @@ namespace _2048console
             ALPHA_BETA,
             ITERATIVE_DEEPENING_ALPHA_BETA,
             PARALLEL_ALPHA_BETA,
-            //PARALLEL_ITERATIVE_DEEPENING_ALPHA_BETA,
+            PARALLEL_ITERATIVE_DEEPENING_ALPHA_BETA,
             CLASSIC_EXPECTIMAX,
             EXPECTIMAX_STAR1,
             ITERATIVE_DEEPENING_EXPECTIMAX,
@@ -115,7 +115,7 @@ namespace _2048console
                     Console.WriteLine(GetStatistics(highTileCount, runs));
                         
                 }
-                else // minimaxType == AI_TYPE.ITERATIVE_DEEPENING_ALPHA_BETA
+                else if(minimaxType == AI_TYPE.ITERATIVE_DEEPENING_ALPHA_BETA || minimaxType == AI_TYPE.PARALLEL_ITERATIVE_DEEPENING_ALPHA_BETA)
                 {
                     int timeLimit = GetChoice("Time limit? (in ms)");
                     for (int i = 0; i < runs; i++)
@@ -371,6 +371,11 @@ namespace _2048console
                 Minimax minimax = new Minimax(game, depth);
                 end = minimax.RunParallelAlphaBeta(print);
             }
+            else if (AItype == AI_TYPE.PARALLEL_ITERATIVE_DEEPENING_ALPHA_BETA)
+            {
+                Minimax minimax = new Minimax(game, depth);
+                end = minimax.RunParallelIterativeDeepeningAlphaBeta(print, timeLimit);
+            }
             else if (AItype == AI_TYPE.CLASSIC_EXPECTIMAX)
             {
                 Expectimax expectimax = new Expectimax(game, depth);
@@ -429,11 +434,12 @@ namespace _2048console
 
         private static AI_TYPE GetMinimaxType()
         {
-            int choice = GetChoice("1: Classic Minimax\n2: Alpha-Beta\n3: Iterative Deepening Alpha Beta\n4: Parallel Alpha Beta");
+            int choice = GetChoice("1: Classic Minimax\n2: Alpha-Beta\n3: Iterative Deepening Alpha Beta\n4: Parallel Alpha Beta\n5: Parallel Iterative Deepening Alpha Beta");
             if (choice == 1) return AI_TYPE.CLASSIC_MINIMAX;
             else if (choice == 2) return AI_TYPE.ALPHA_BETA;
             else if (choice == 3) return AI_TYPE.ITERATIVE_DEEPENING_ALPHA_BETA;
             else if (choice == 4) return AI_TYPE.PARALLEL_ALPHA_BETA;
+            else if (choice == 5) return AI_TYPE.PARALLEL_ITERATIVE_DEEPENING_ALPHA_BETA;
             else return GetMinimaxType(); // invalid option, ask again
         }
 
@@ -450,7 +456,7 @@ namespace _2048console
 
         private static AI_TYPE GetMonteCarloTreeSearchType()
         {
-            int choice = GetChoice("1: Iteration Limited MCTS\n2: Time Limited MCTS\n3: Root Parallel Iteration Limited MCTS\n4: Root Parallel Time Limites MCTS");
+            int choice = GetChoice("1: Iteration Limited MCTS\n2: Time Limited MCTS\n3: Root Parallel Iteration Limited MCTS\n4: Root Parallel Time Limited MCTS");
             if (choice == 1) return AI_TYPE.ITERATION_LIMITED_MCTS;
             else if (choice == 2) return AI_TYPE.TIME_LIMITED_MCTS;
             else if (choice == 3) return AI_TYPE.ROOT_PARALLEL_ITERATION_LIMITED_MCTS;
