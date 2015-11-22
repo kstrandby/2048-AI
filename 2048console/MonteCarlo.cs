@@ -26,6 +26,8 @@ namespace _2048console
             this.random = new Random();
         }
 
+        
+
         public State RunIterationLimitedMCTS(bool print, int iterationLimit)
         {
             State rootState = null;
@@ -284,8 +286,18 @@ namespace _2048console
                 // 1: Select
                 while (node.UntriedMoves.Count == 0 && node.Children.Count != 0)
                 {
-                    node = node.SelectChild();
-                    state = state.ApplyMove(node.GeneratingMove);
+                    if (state.Player == GameEngine.COMPUTER)
+                    {
+                        Move move = state.GetRandomMove();
+                        state = state.ApplyMove(move);
+                        Node parent = node;
+                        node = new Node(move, parent, state);
+                    }
+                    else
+                    {
+                        node = node.SelectChild();
+                        state = state.ApplyMove(node.GeneratingMove);
+                    }
                 }
 
                 // 2: Expand

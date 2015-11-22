@@ -83,9 +83,28 @@ namespace _2048console
         // Returns a random move available in the state
         public Move GetRandomMove()
         {
-            List<Move> moves = GetMoves();
-            int randomIndex = random.Next(0, moves.Count);
-            return moves[randomIndex];
+            if (player == GameEngine.COMPUTER)
+            {
+                List<Cell> availableCells = GetAvailableCells();
+                // choose cell at random
+                Cell cell = availableCells[random.Next(0, availableCells.Count)];
+                // choose tile value according to probabilities
+                int prob = random.Next(0, 100);
+                if (prob < GameEngine.TILE2_PROBABILITY)
+                {
+                    return new ComputerMove(new Tuple<int, int>(cell.x, cell.y), 2);
+                }
+                else
+                {
+                    return new ComputerMove(new Tuple<int, int>(cell.x, cell.y), 4);
+                }
+            }
+            else
+            {
+                List<Move> moves = GetMoves();
+                int randomIndex = random.Next(0, moves.Count);
+                return moves[randomIndex];
+            }
         }
 
         // Checks if two states are equal
