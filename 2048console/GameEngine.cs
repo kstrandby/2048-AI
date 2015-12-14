@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ namespace _2048console
     // Class handling all game logic
     public class GameEngine
     {
+        //private StreamWriter writerMin = new StreamWriter(@"branchingFactorMIN.txt", true);
 
         // constants
         public const int PLAYER = 0;
@@ -67,6 +69,10 @@ namespace _2048console
         // 10% for a 4-tile
         public void generateRandomTile()
         {
+            State state = new State(board, scoreController.getScore(), COMPUTER);
+            int numMoves = state.GetAvailableCells().Count * 2;
+            //writerMin.WriteLine(numMoves);
+
             // generate random available position
             Random random = new Random();
             int x = random.Next(0, 4);
@@ -118,6 +124,9 @@ namespace _2048console
 
             if (occupied.Count() == 16 && BoardHelper.IsGameOver(board))
             {
+                //writerMin.Close();
+
+
                 return true;
             }
             return false;

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using _2048console.GeneticAlgorithm;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,6 +22,10 @@ namespace _2048console
         const double lower_emptycells = 0;
         const double upper_highestvalue = 17;
         const double lower_highestvalue = 1;
+        const double upper_points = 21.90686858; //Math.Log(3932100) / Math.Log(2)
+        const double lower_points = 0;
+        const double upper_trappedpenalty = 0;
+        const double lower_trappedpenalty = -8;
 
         // weights
         const double smoothness_weight = 0.1;
@@ -31,19 +36,53 @@ namespace _2048console
         const double trappedpenalty_weight = 2.0;
 
         // for Expectimax Star1 pruning
-        // NB: Remember to change this according to the heuristic in use
-        internal static double GetUpperBound()
+        internal static double GetUpperBound(WeightVector weights)
         {
-            double bound = smoothness_weight * upper_smoothness + monotonicity_weight * upper_monotonicity + emptycells_weight * upper_emptycells + highestvalue_weight * upper_highestvalue;
+            double bound = weights.Empty_cells * upper_emptycells + weights.Highest_tile * upper_highestvalue + weights.Monotonicity * upper_monotonicity 
+               + weights.Points * upper_points + weights.Smoothness * upper_smoothness + weights.Trapped_penalty * upper_trappedpenalty;
             return bound + 10;
         }
 
         // for Expectimax Star1 pruning
-        // NB: Remember to change this according to the heuristic in use
+        internal static double GetLowerBound(WeightVector weights)
+        {
+            double bound = weights.Empty_cells * lower_emptycells + weights.Highest_tile * lower_highestvalue + weights.Monotonicity * lower_monotonicity
+                + weights.Points * lower_points + weights.Smoothness * lower_smoothness + weights.Trapped_penalty * lower_trappedpenalty;
+            return bound - 10;
+        }
+
+        // for Expectimax Star1 pruning
+        internal static double GetUpperBound()
+        {
+            return 0;
+        }
+
+        // for Expectimax Star1 pruning
         internal static double GetLowerBound()
         {
-            double bound = smoothness_weight * lower_smoothness + monotonicity_weight * lower_monotonicity + emptycells_weight * lower_emptycells + highestvalue_weight * lower_highestvalue;
-            return bound - 10;
+            return 0;
+        }
+
+        public static double EvaluateWithWeights(State state, WeightVector weights)
+        {
+            if (state.IsGameOver()) return GetLowerBound(weights) - 10;
+            else
+            {
+                double emptycells = EmptyCells(state);
+                double highestvalue = HighestValue(state);
+                double monotonicity = Monotonicity(state);
+                double points = Points(state);
+                double smoothness = Smoothness(state);
+                double trappedpenalty = TrappedPenalty(state);
+
+                double eval = weights.Empty_cells * emptycells + weights.Highest_tile * highestvalue + weights.Monotonicity * monotonicity + weights.Points * points + weights.Smoothness * smoothness - weights.Trapped_penalty * trappedpenalty;
+
+                if (state.IsWin())
+                {
+                    return eval + 10;
+                }
+                else return eval;
+            }
         }
 
         public static double Evaluate(GameEngine gameEngine, State state)
@@ -57,13 +96,13 @@ namespace _2048console
             {
                 double eval = 0;
 
-                double smoothness = Smoothness(state);
-                double monotonicity = Monotonicity(state);
-                double emptycells = EmptyCells(state);
-                double highestvalue = HighestValue(state);
-                double trappedpenalty = TrappedPenalty(state);
-                eval = smoothness_weight * smoothness + monotonicity_weight * monotonicity + emptycells_weight * emptycells + highestvalue_weight * highestvalue -trappedpenalty_weight * trappedpenalty;
-
+                //double smoothness = Smoothness(state);
+                //double monotonicity = Monotonicity(state);
+                //double emptycells = EmptyCells(state);
+                //double highestvalue = HighestValue(state);
+                //double trappedpenalty = TrappedPenalty(state);
+                //eval = smoothness_weight * smoothness + monotonicity_weight * monotonicity + emptycells_weight * emptycells + highestvalue_weight * highestvalue -trappedpenalty_weight * trappedpenalty;
+                eval = Smoothness(state);
 
                 if (state.IsWin())
                     return 1000 + eval;
@@ -138,7 +177,8 @@ namespace _2048console
         // returns the number of points in the state
         public static double Points(State state)
         {
-            return state.Points;
+            if (state.Points == 0) return 0;
+            else return Math.Log(state.Points) / Math.Log(2);
         }
 
 

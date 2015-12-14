@@ -46,6 +46,9 @@
     <Compile Include="Expectimax.cs" />
     <Compile Include="GameEngine.cs" />
     <Compile Include="BoardHelper.cs" />
+    <Compile Include="GeneticAlgorithm\GeneticAlgorithm.cs" />
+    <Compile Include="GeneticAlgorithm\WeightVector.cs" />
+    <Compile Include="GeneticAlgorithm\WeightVectorChromosome.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Minimax.cs" />
     <Compile Include="MonteCarlo.cs" />

@@ -13,9 +13,10 @@ namespace _2048console
     class MonteCarlo
     {
         // Constants for default policy
-        private const int DEFAULT_POLICY = RANDOM_POLICY;
+        private const int DEFAULT_POLICY = BEST_EVAL_POLICY;
         
         private const int RANDOM_POLICY = 1;
+        private const int BEST_EVAL_POLICY = 2;
 
         private GameEngine gameEngine;
         private Random random;
@@ -330,6 +331,39 @@ namespace _2048console
                 while (state.GetMoves().Count != 0)
                 {
                     state = state.ApplyMove(state.GetRandomMove());
+                }
+                return state;
+            }
+            else if (DEFAULT_POLICY == BEST_EVAL_POLICY)
+            {
+                List<Move> moves = state.GetMoves();
+                while (moves.Count != 0)
+                {
+                    // random move for computer
+                    if (state.Player == GameEngine.COMPUTER)
+                    {
+                        state = state.ApplyMove(state.GetRandomMove());
+                    }
+                    else
+                    {
+                        // find the move that results in the best child state, based on the evaluation function
+                        State bestState = null;
+                        double bestScore = Double.MinValue;
+                        foreach (Move move in moves)
+                        {
+                            State result = state.ApplyMove(move);
+                            double score = AI.Evaluate(gameEngine, result);
+                            if (score > bestScore)
+                            {
+                                bestScore = score;
+                                bestState = result;
+                            }
+                        }
+                        state = bestState;
+
+                    }
+
+                    moves = state.GetMoves();
                 }
                 return state;
             }

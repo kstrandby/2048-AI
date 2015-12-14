@@ -21,6 +21,10 @@ namespace _2048console
         private List<Cell> available;
         private int chosenDepth;
 
+
+        
+
+
         // debugging
         private Logger logger;
         bool debug = false; // switch to turn debug on/off
@@ -41,6 +45,8 @@ namespace _2048console
 
         public State RunClassicMinimax(bool print)
         {
+            
+
             while (true)
             {
                 // update state
@@ -67,11 +73,13 @@ namespace _2048console
                     logger.WriteLog(true);
                 }
                 gameEngine.SendUserAction((PlayerMove)move);
+                
             }
         }
 
         public State RunAlphaBeta(bool print)
         {
+
             while (true)
             {
                 // update state
@@ -91,6 +99,7 @@ namespace _2048console
                     {
                         logger.WriteLog(true);
                     }
+
                     return currentState;
                 }
                 if (debug)
@@ -98,6 +107,7 @@ namespace _2048console
                     logger.WriteLog(true);
                 }
                 gameEngine.SendUserAction((PlayerMove)move);
+
             }
         }
 
@@ -134,6 +144,7 @@ namespace _2048console
 
         public State RunParallelAlphaBeta(bool print)
         {
+
             while (true)
             {
                 // update state
@@ -153,6 +164,7 @@ namespace _2048console
                     {
                         logger.WriteLog(true);
                     }
+
                     return currentState;
                 }
                 if (debug)
@@ -383,6 +395,7 @@ namespace _2048console
         // runs minimax with alpha beta pruning
         Move AlphaBeta(State state, int depth, double alpha, double beta)
         {
+
             Move bestMove;
             if (depth == 0 || state.IsGameOver())
             {
@@ -420,6 +433,7 @@ namespace _2048console
 
             foreach (Move move in moves)
             {
+
                 State resultingState = state.ApplyMove(move);
                 currentScore = AlphaBeta(resultingState, depth - 1, alpha, beta).Score;
 
@@ -448,11 +462,19 @@ namespace _2048console
 
             List<Move> moves = state.GetMoves();
 
+            if (depth == chosenDepth)
+            {
+                int numMax = moves.Count;
+            }
+            
+
             if (debug)
                 logger.writeParent(state, chosenDepth - depth);
             
             foreach (Move move in moves)
             {
+
+
                 State resultingState = state.ApplyMove(move);
                 currentScore = AlphaBeta(resultingState, depth - 1, alpha, beta).Score;
                 

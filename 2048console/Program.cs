@@ -1,4 +1,5 @@
-﻿using System;
+﻿using _2048console.GeneticAlgorithm;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -16,6 +17,10 @@ namespace _2048console
         private const string EXPECTIMAX_LOG_FILE = @"Expectimax.txt";
         private const string MCTS_LOG_FILE = @"MCTS.txt";
 
+        // (0,547509991715388, 2,38727824284314, 1,39288308997609, 0,0380164908354493, 0,272597079511877, 4,49781362273963)
+        private static WeightVector weights = new WeightVector { Empty_cells = 0.5475, Highest_tile = 2.387, Monotonicity = 1.3928, Points = 0.038, Smoothness = 0.2726, Trapped_penalty = 4.4978 };
+        //private static WeightVector weights = new WeightVector { Empty_cells = 0.5, Highest_tile = 1.0, Monotonicity = 1.0, Points = 0.0, Smoothness = 0.1, Trapped_penalty = 2.0 };
+
         private const int NUM_THREADS = 8; // adjust based how many cores you have
 
         enum AI_TYPE
@@ -30,6 +35,8 @@ namespace _2048console
             ITERATIVE_DEEPENING_EXPECTIMAX,
             PARALLEL_EXPECTIMAX,
             PARALLEL_ITERATIVE_DEEPENING_EXPECTIMAX,
+            TT_ITERATIVE_DEEPENING_EXPECTIMAX,
+            TT_ITERATIVE_DEEPENING_STAR1,
             ITERATION_LIMITED_MCTS,
             TIME_LIMITED_MCTS,
             ROOT_PARALLEL_ITERATION_LIMITED_MCTS,
@@ -38,6 +45,8 @@ namespace _2048console
 
         static void Main(string[] args)
         {
+            //GA ga = new GA(40, 5, 1000);
+            //ga.RunAlgorithm();
             ShowMenu();        
         }
 
@@ -163,7 +172,8 @@ namespace _2048console
                     CleanConsole();
                     RunAIGame(expectimaxType, true, depth);
                 }
-                else if(expectimaxType == AI_TYPE.ITERATIVE_DEEPENING_EXPECTIMAX || expectimaxType == AI_TYPE.PARALLEL_ITERATIVE_DEEPENING_EXPECTIMAX)
+                else if(expectimaxType == AI_TYPE.ITERATIVE_DEEPENING_EXPECTIMAX || expectimaxType == AI_TYPE.PARALLEL_ITERATIVE_DEEPENING_EXPECTIMAX 
+                    || expectimaxType == AI_TYPE.TT_ITERATIVE_DEEPENING_EXPECTIMAX || expectimaxType == AI_TYPE.TT_ITERATIVE_DEEPENING_STAR1)
                 {
                     int timeLimit = GetChoice("Time limit? (in ms)");
                     CleanConsole();
@@ -207,7 +217,8 @@ namespace _2048console
                     writer.Close();
                     Console.WriteLine(GetStatistics(highTileCount, runs));
                 }
-                else if (expectimaxType == AI_TYPE.ITERATIVE_DEEPENING_EXPECTIMAX || expectimaxType == AI_TYPE.PARALLEL_ITERATIVE_DEEPENING_EXPECTIMAX)
+                else if (expectimaxType == AI_TYPE.ITERATIVE_DEEPENING_EXPECTIMAX || expectimaxType == AI_TYPE.PARALLEL_ITERATIVE_DEEPENING_EXPECTIMAX
+                    || expectimaxType == AI_TYPE.TT_ITERATIVE_DEEPENING_EXPECTIMAX || expectimaxType == AI_TYPE.TT_ITERATIVE_DEEPENING_STAR1)
                 {
                     int timeLimit = GetChoice("Time limit? (in ms)");
                     for (int i = 0; i < runs; i++)
@@ -389,7 +400,7 @@ namespace _2048console
             else if (AItype == AI_TYPE.ITERATIVE_DEEPENING_EXPECTIMAX)
             {
                 Expectimax expectimax = new Expectimax(game, depth);
-                end = expectimax.RunIterativeDeepeningExpectimax(print, timeLimit);
+                end = expectimax.RunIterativeDeepeningExpectimax(print, timeLimit, weights);
             }
             else if (AItype == AI_TYPE.PARALLEL_EXPECTIMAX)
             {
@@ -399,7 +410,17 @@ namespace _2048console
             else if (AItype == AI_TYPE.PARALLEL_ITERATIVE_DEEPENING_EXPECTIMAX)
             {
                 Expectimax expectimax = new Expectimax(game, depth);
-                end = expectimax.RunParallelIterativeDeepeningExpectimax(print, timeLimit);
+                end = expectimax.RunParallelIterativeDeepeningExpectimax(print, timeLimit, weights);
+            }
+            else if (AItype == AI_TYPE.TT_ITERATIVE_DEEPENING_EXPECTIMAX)
+            {
+                Expectimax exptectimax = new Expectimax(game, depth);
+                end = exptectimax.RunTTExpectimax(print, timeLimit, weights);
+            }
+            else if (AItype == AI_TYPE.TT_ITERATIVE_DEEPENING_STAR1)
+            {
+                Expectimax expectimax = new Expectimax(game, depth);
+                end = expectimax.RunTTStar1(print, timeLimit, weights);
             }
             else if (AItype == AI_TYPE.ITERATION_LIMITED_MCTS)
             {
@@ -420,7 +441,7 @@ namespace _2048console
             {
                 MonteCarlo MCTS = new MonteCarlo(game);
                 end = MCTS.RunRootParallelizationTimeLimitedMCTS(print, timeLimit, NUM_THREADS);
-            }
+            } 
             else
             {
                 throw new Exception();
@@ -445,12 +466,14 @@ namespace _2048console
 
         private static AI_TYPE GetExpectimaxType()
         {
-            int choice = GetChoice("1: Classic Expectimax\n2: Star1 Expectimax\n3: Iterative Deepening Expectimax\n4: Parallel Expectimax\n5: Parallel Iterative Deepening Expectimax");
+            int choice = GetChoice("1: Classic Expectimax\n2: Star1 Expectimax\n3: Iterative Deepening Expectimax\n4: Parallel Expectimax\n5: Parallel Iterative Deepening Expectimax\n6: Transposition Table Iterative Deepening Expectimax\n7: Transposition Table Iterative Deepening Star1");
             if (choice == 1) return AI_TYPE.CLASSIC_EXPECTIMAX;
             else if (choice == 2) return AI_TYPE.EXPECTIMAX_STAR1;
             else if (choice == 3) return AI_TYPE.ITERATIVE_DEEPENING_EXPECTIMAX;
             else if (choice == 4) return AI_TYPE.PARALLEL_EXPECTIMAX;
             else if (choice == 5) return AI_TYPE.PARALLEL_ITERATIVE_DEEPENING_EXPECTIMAX;
+            else if (choice == 6) return AI_TYPE.TT_ITERATIVE_DEEPENING_EXPECTIMAX;
+            else if (choice == 7) return AI_TYPE.TT_ITERATIVE_DEEPENING_STAR1;
             else return GetExpectimaxType(); // invalid option, ask again
         }
 
