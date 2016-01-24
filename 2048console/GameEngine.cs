@@ -10,15 +10,12 @@ namespace _2048console
     // Class handling all game logic
     public class GameEngine
     {
-        //private StreamWriter writerMin = new StreamWriter(@"branchingFactorMIN.txt", true);
-
         // constants
         public const int PLAYER = 0;
         public const int COMPUTER = 1;
         public const int board_SIZE = 16;
         public const int ROWS = 4, COLUMNS = 4;
         public const int TILE2_PROBABILITY = 90;
-        
 
         public int[][] board { get; set; }
         public List<Cell> occupied;
@@ -67,12 +64,8 @@ namespace _2048console
         // Generates a random tile at a random empty cell on the board
         // The tile is created with the probability 90% for a 2-tile and 
         // 10% for a 4-tile
-        public void generateRandomTile()
+        public int generateRandomTile()
         {
-            State state = new State(board, scoreController.getScore(), COMPUTER);
-            int numMoves = state.GetAvailableCells().Count * 2;
-            //writerMin.WriteLine(numMoves);
-
             // generate random available position
             Random random = new Random();
             int x = random.Next(0, 4);
@@ -98,38 +91,32 @@ namespace _2048console
             Cell cell = available.Find(item => item.x == x && item.y == y);
             available.Remove(cell);
             occupied.Add(cell);
+            return board[x][y];
         }
 
         // Executes the user action by updating the board representation
-        public bool SendUserAction(PlayerMove action)
+        public int SendUserAction(PlayerMove action)
         {
+            int value = -1;
             if (action.Direction == DIRECTION.DOWN)
             {
-                DownPressed();
+                value = DownPressed();
             }
             if (action.Direction == DIRECTION.UP)
             {
-                UpPressed();
+                value = UpPressed();
             }
             if (action.Direction == DIRECTION.LEFT)
             {
-                LeftPressed();
+                value = LeftPressed();
             }
             if (action.Direction == DIRECTION.RIGHT)
             {
-                RightPressed();
+                value = RightPressed();
             }
 
             Reset();
-
-            if (occupied.Count() == 16 && BoardHelper.IsGameOver(board))
-            {
-                //writerMin.Close();
-
-
-                return true;
-            }
-            return false;
+            return value;
         }
 
         // Deletes all cells in our list of merged cells
@@ -139,7 +126,7 @@ namespace _2048console
         }
 
         // Executes the user action DOWN
-        private void DownPressed()
+        private int DownPressed()
         {
             bool tileMoved = false; // to keep track of if a tile has been moved or not
             for (int i = 0; i < ROWS; i++)
@@ -168,11 +155,12 @@ namespace _2048console
                 }
             }
             if (tileMoved)
-                generateRandomTile();
+                return generateRandomTile();
+            return -1;
         }
 
         // Executes the user action UP
-        private void UpPressed()
+        private int UpPressed()
         {
             bool tileMoved = false; // to keep track of if a tile has been moved or not
             for (int i = 0; i < ROWS; i++)
@@ -202,11 +190,12 @@ namespace _2048console
                 }
             }
             if (tileMoved)
-                generateRandomTile();
+                return generateRandomTile();
+            return -1;
         }
 
         // Executes the user action LEFT
-        private void LeftPressed()
+        private int LeftPressed()
         {
             bool tileMoved = false; // to keep track of if a tile has been moved or not
             for (int j = 0; j < ROWS; j++)
@@ -235,11 +224,12 @@ namespace _2048console
                 }
             }
             if (tileMoved)
-                generateRandomTile();
+                return generateRandomTile();
+            return -1;
         }
 
         // Executes the user action RIGHT
-        private void RightPressed()
+        private int RightPressed()
         {
             bool tileMoved = false; // to keep track of if a tile has been moved or not
             for (int j = 0; j < ROWS; j++)
@@ -269,7 +259,8 @@ namespace _2048console
                 }
             }
             if (tileMoved)
-                generateRandomTile();
+                return generateRandomTile();
+            return -1;
         }
 
         // Moves a tile from column from_x, row from_y to column to_x, row to_y

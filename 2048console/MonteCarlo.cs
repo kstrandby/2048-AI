@@ -1,4 +1,5 @@
-﻿using System;
+﻿using _2048console.GeneticAlgorithm;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,13 +14,13 @@ namespace _2048console
     class MonteCarlo
     {
         // Constants for default policy
-        private const int DEFAULT_POLICY = BEST_EVAL_POLICY;
-        
         private const int RANDOM_POLICY = 1;
         private const int BEST_EVAL_POLICY = 2;
+        private const int EXPECTIMAX_POLICY = 3;
 
         private GameEngine gameEngine;
         private Random random;
+        private static WeightVectorAll weights = new WeightVectorAll { Corner = 0, Empty_cells = 0, Highest_tile = 0, Monotonicity = 0, Points = 0, Smoothness = 0, Snake = 1, Trapped_penalty = 0 };
 
         public MonteCarlo(GameEngine gameEngine)
         {
@@ -27,8 +28,8 @@ namespace _2048console
             this.random = new Random();
         }
 
-        
 
+        // Runs an entire game using MCTS limited by number of iterations
         public State RunIterationLimitedMCTS(bool print, int iterationLimit)
         {
             State rootState = null;
@@ -53,6 +54,7 @@ namespace _2048console
             }
         }
 
+        // Runs an entire game using MCTS limited by time
         public State RunTimeLimitedMCTS(bool print, int timeLimit)
         {
             State rootState = null;
@@ -66,7 +68,6 @@ namespace _2048console
                     Program.PrintState(rootState);
                 }
 
-
                 Node result = TimeLimitedMCTS(rootState, timeLimit);
                 if (result == null)
                 {
@@ -77,6 +78,7 @@ namespace _2048console
             }
         }
 
+        // Runs an entire game using parallelized MCTS limited by number of iterations
         public State RunRootParallelizationIterationLimitedMCTS(bool print, int iterationLimit, int numThreads)
         {
             State rootState = null;
@@ -101,6 +103,7 @@ namespace _2048console
             }
         }
 
+        // Runs an entire game using parallelized MCTS limited by time
         public State RunRootParallelizationTimeLimitedMCTS(bool print, int timeLimit, int numThreads)
         {
             State rootState = null;
@@ -138,7 +141,7 @@ namespace _2048console
             
             Parallel.For(0, numOfThreads, i =>
             {
-                Node resultRoot = IterationLimited(rootState, iterations);
+                Node resultRoot = IterationLimited(rootState, iterations / numOfThreads);
                 foreach (Node child in resultRoot.Children)
                 {
                     allChildren.Add(child);
@@ -181,6 +184,7 @@ namespace _2048console
 
             Stopwatch timer = new Stopwatch();
             timer.Start();
+            
             Parallel.For(0, numOfThreads, i =>
             {
                 Node resultRoot = TimeLimited(rootState, timeLimit, timer);
@@ -230,18 +234,37 @@ namespace _2048console
         public Node TimeLimitedMCTS(State rootState, int timeLimit)
         {
             Stopwatch timer = new Stopwatch();
-            timer.Start();
-            Node rootNode = TimeLimited(rootState, timeLimit, timer);
-            Node bestNode = FindBestChild(rootNode.Children);
+            Node bestNode = null;
+            while (bestNode == null && !rootState.IsGameOver())
+            {
+                timer.Start();
+                Node rootNode = TimeLimited(rootState, timeLimit, timer);
+                bestNode = FindBestChild(rootNode.Children);
+                timeLimit += 10;
+                timer.Reset();
+            }
+            
             return bestNode;
         }
 
         // Runs a Monte Carlo Tree Search limited by a given time limit
-        private Node TimeLimited(State rootState, int timeLimit, Stopwatch timer)
+        public Node TimeLimited(State rootState, int timeLimit, Stopwatch timer)
         {
             Node rootNode = new Node(null, null, rootState);
-            while (timer.ElapsedMilliseconds < timeLimit)
+            while (true)
             {
+                if (timer.ElapsedMilliseconds > timeLimit)
+                {
+                    if (FindBestChild(rootNode.Children) == null && !rootNode.state.IsGameOver())
+                    {
+                        timeLimit += 10;
+                        timer.Restart();
+                    }
+                    else
+                    {
+                        return rootNode;
+                    }
+                }
                 Node node = rootNode;
                 State state = rootState.Clone();
 
@@ -261,7 +284,7 @@ namespace _2048console
                 }
 
                 // 3: Simulation
-                state = SimulateGame(state);
+                state = SimulateGame(state, EXPECTIMAX_POLICY);
 
                 // 4: Backpropagation
                 while (node != null)
@@ -270,7 +293,6 @@ namespace _2048console
                     node = node.Parent;
                 }
             }
-            return rootNode;
         }
 
         // Runs a Monte Carlo Tree Search from the given root node
@@ -310,7 +332,7 @@ namespace _2048console
                 }
 
                 // 3: Simulation
-                state = SimulateGame(state);
+                state = SimulateGame(state, EXPECTIMAX_POLICY);
 
                 // 4: Backpropagation
                 while (node != null)
@@ -324,9 +346,9 @@ namespace _2048console
 
         // Simulates a game to the end (game over) based on the default policy
         // Returns the game over state
-        private State SimulateGame(State state)
+        private State SimulateGame(State state, int POLICY)
         {
-            if (DEFAULT_POLICY == RANDOM_POLICY)
+            if (POLICY == RANDOM_POLICY)
             {
                 while (state.GetMoves().Count != 0)
                 {
@@ -334,7 +356,7 @@ namespace _2048console
                 }
                 return state;
             }
-            else if (DEFAULT_POLICY == BEST_EVAL_POLICY)
+            else if (POLICY == BEST_EVAL_POLICY)
             {
                 List<Move> moves = state.GetMoves();
                 while (moves.Count != 0)
@@ -352,7 +374,7 @@ namespace _2048console
                         foreach (Move move in moves)
                         {
                             State result = state.ApplyMove(move);
-                            double score = AI.Evaluate(gameEngine, result);
+                            double score = AI.Evaluate(result);
                             if (score > bestScore)
                             {
                                 bestScore = score;
@@ -360,21 +382,34 @@ namespace _2048console
                             }
                         }
                         state = bestState;
-
                     }
-
                     moves = state.GetMoves();
+                }
+                return state;
+            }
+            else if (POLICY == EXPECTIMAX_POLICY)
+            {
+                Expectimax expectimax = new Expectimax(gameEngine, 2);
+                while (state.GetMoves().Count != 0) {
+                    if (state.Player == GameEngine.COMPUTER)
+                    {
+                        state = state.ApplyMove(state.GetRandomMove());
+                    }
+                    else
+                    {
+                        Move move = expectimax.ExpectimaxAlgorithm(state, 2, weights);
+                        state = state.ApplyMove(move);
+                    }
                 }
                 return state;
             }
             else throw new Exception();
         }
-
+       
         // Called at the end of a MCTS to decide on the best child
         // Best child is the child with the highest average score
         private Node FindBestChild(List<Node> children)
         {
-
             double bestResults = 0;
             Node best = null;
             foreach (Node child in children)

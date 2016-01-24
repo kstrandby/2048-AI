@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace _2048console
 {
     // class used for Minimax searches
-    class Minimax
+    public class Minimax
     {
         private const string LOGFILE = @"Log.txt";
 
@@ -20,10 +20,6 @@ namespace _2048console
         private State currentState;
         private List<Cell> available;
         private int chosenDepth;
-
-
-        
-
 
         // debugging
         private Logger logger;
@@ -43,10 +39,10 @@ namespace _2048console
             }
         }
 
+
+        // Runs an entire game using classic minimax with no pruning
         public State RunClassicMinimax(bool print)
         {
-            
-
             while (true)
             {
                 // update state
@@ -73,13 +69,12 @@ namespace _2048console
                     logger.WriteLog(true);
                 }
                 gameEngine.SendUserAction((PlayerMove)move);
-                
             }
         }
 
+        // Runs an entire search using Minimax with alpha-beta pruning
         public State RunAlphaBeta(bool print)
         {
-
             while (true)
             {
                 // update state
@@ -107,10 +102,10 @@ namespace _2048console
                     logger.WriteLog(true);
                 }
                 gameEngine.SendUserAction((PlayerMove)move);
-
             }
         }
-
+        
+        // Runs an entire game using iterative alpha-beta search
         public State RunIterativeDeepeningAlphaBeta(bool print, int timeLimit)
         {
             while (true)
@@ -142,9 +137,9 @@ namespace _2048console
             }
         }
 
+        // Runs an entire game using parallel alpha-beta search
         public State RunParallelAlphaBeta(bool print)
         {
-
             while (true)
             {
                 // update state
@@ -175,6 +170,7 @@ namespace _2048console
             }
         }
 
+        // Runs an entire game using parallel iterative deepening alpha-beta search
         public State RunParallelIterativeDeepeningAlphaBeta(bool print, int timeLimit)
         {
             while (true)
@@ -284,20 +280,32 @@ namespace _2048console
         }
 
         // runs an iterative deepening minimax search limited by the given timeLimit
-        private Move IterativeDeepening(State state, double timeLimit)
+        public Move IterativeDeepening(State state, double timeLimit)
         {
-            int depth = 0;
+            int depth = 1;
             Stopwatch timer = new Stopwatch();
             Move bestMove = null;
             // start the search
             timer.Start();
-            while (timer.ElapsedMilliseconds < timeLimit)
+
+            while (true)
             {
+                if (timer.ElapsedMilliseconds > timeLimit)
+                {
+                    if (bestMove == null) // workaround to overcome problem with timer running out too fast with low limits
+                    {
+                        timeLimit += 10;
+                        timer.Restart();
+                    }
+                    else
+                    {
+                        return bestMove;
+                    }
+                }
                 Tuple<Move, Boolean> result = IterativeDeepeningAlphaBeta(state, depth, Double.MinValue, Double.MaxValue, timeLimit, timer);
                 if (result.Item2) bestMove = result.Item1; // only update bestMove if full recursion
                 depth++;
             }
-            return bestMove;
         }
 
         // recursive part of the minimax algorithm when used in iterative deepening search
@@ -312,13 +320,13 @@ namespace _2048console
                 if (state.Player == GameEngine.PLAYER)
                 {
                     bestMove = new PlayerMove(); // dummy action, as there will be no valid move
-                    bestMove.Score = AI.Evaluate(gameEngine, state);
+                    bestMove.Score = AI.Evaluate(state);
                     return new Tuple<Move, Boolean>(bestMove, true);
                 }
                 else if (state.Player == GameEngine.COMPUTER)
                 {
                     bestMove = new ComputerMove(); // dummy action, as there will be no valid move
-                    bestMove.Score = AI.Evaluate(gameEngine, state);
+                    bestMove.Score = AI.Evaluate(state);
                     return new Tuple<Move, Boolean>(bestMove, true);
                 }
                 else throw new Exception();
@@ -368,7 +376,7 @@ namespace _2048console
                 foreach (Move move in moves)
                 {
                     State resultingState = state.ApplyMove(move);
-                    currentScore = AlphaBeta(resultingState, depth - 1, alpha, beta).Score;
+                    currentScore = IterativeDeepeningAlphaBeta(resultingState, depth - 1, alpha, beta, timeLimit, timer).Item1.Score;
 
                     if (currentScore < lowestScore)
                     {
@@ -389,7 +397,6 @@ namespace _2048console
                 return new Tuple<Move, Boolean>(bestMove, true);
             }
             else throw new Exception();
-
         }
 
         // runs minimax with alpha beta pruning
@@ -402,13 +409,13 @@ namespace _2048console
                 if (state.Player == GameEngine.PLAYER)
                 {
                     bestMove = new PlayerMove();
-                    bestMove.Score = AI.Evaluate(gameEngine, state);
+                    bestMove.Score = AI.Evaluate(state);
                     return bestMove;
                 }
                 else if (state.Player == GameEngine.COMPUTER)
                 {
                     bestMove = new ComputerMove();
-                    bestMove.Score = AI.Evaluate(gameEngine, state);
+                    bestMove.Score = AI.Evaluate(state);
                     return bestMove;
                 }
                 else throw new Exception();
@@ -466,15 +473,12 @@ namespace _2048console
             {
                 int numMax = moves.Count;
             }
-            
 
             if (debug)
                 logger.writeParent(state, chosenDepth - depth);
             
             foreach (Move move in moves)
             {
-
-
                 State resultingState = state.ApplyMove(move);
                 currentScore = AlphaBeta(resultingState, depth - 1, alpha, beta).Score;
                 
@@ -507,17 +511,16 @@ namespace _2048console
                 if (state.Player == GameEngine.PLAYER)
                 {
                     bestMove = new PlayerMove();
-                    bestMove.Score = AI.Evaluate(gameEngine, state);
+                    bestMove.Score = AI.Evaluate(state);
                     return bestMove;
                 }
                 else if (state.Player == GameEngine.COMPUTER)
                 {
                     bestMove = new ComputerMove();
-                    bestMove.Score = AI.Evaluate(gameEngine, state);
+                    bestMove.Score = AI.Evaluate(state);
                     return bestMove;
                 }
                 else throw new Exception();
-                
             }
 
             if (state.Player == GameEngine.PLAYER)

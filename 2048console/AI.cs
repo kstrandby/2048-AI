@@ -1,14 +1,15 @@
 ﻿using _2048console.GeneticAlgorithm;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace _2048console
 {
-
-    // Static class used for methods to calculate heuristics
+    // Static class used for heuristic definitions and providing evalation function
     public static class AI
     {
         // Constants
@@ -26,56 +27,52 @@ namespace _2048console
         const double lower_points = 0;
         const double upper_trappedpenalty = 0;
         const double lower_trappedpenalty = -8;
-
-        // weights
-        const double smoothness_weight = 0.1;
-        const double monotonicity_weight = 1.0;
-        const double emptycells_weight = 0.5;
-        const double highestvalue_weight = 1.0;
-        const double snake_weight = 0.5;
-        const double trappedpenalty_weight = 2.0;
+        const double upper_snake = 22.2276405; //Math.Log(4911187.6) / Math.Log(2)
+        const double lower_snake = 4.807354922;
+        const double upper_corner = 22.2276405;
+        const double lower_corner = 4.700439718;
 
         // for Expectimax Star1 pruning
         internal static double GetUpperBound(WeightVector weights)
         {
-            double bound = weights.Empty_cells * upper_emptycells + weights.Highest_tile * upper_highestvalue + weights.Monotonicity * upper_monotonicity 
-               + weights.Points * upper_points + weights.Smoothness * upper_smoothness + weights.Trapped_penalty * upper_trappedpenalty;
+            double bound = ((WeightVectorAll)weights).Corner * upper_corner + ((WeightVectorAll)weights).Empty_cells * upper_emptycells 
+                + ((WeightVectorAll)weights).Highest_tile * upper_highestvalue + ((WeightVectorAll)weights).Monotonicity * upper_monotonicity
+                + ((WeightVectorAll)weights).Points * upper_points + ((WeightVectorAll)weights).Smoothness * upper_smoothness
+                + ((WeightVectorAll)weights).Snake * upper_snake + ((WeightVectorAll)weights).Trapped_penalty * upper_trappedpenalty;
             return bound + 10;
         }
 
         // for Expectimax Star1 pruning
         internal static double GetLowerBound(WeightVector weights)
         {
-            double bound = weights.Empty_cells * lower_emptycells + weights.Highest_tile * lower_highestvalue + weights.Monotonicity * lower_monotonicity
-                + weights.Points * lower_points + weights.Smoothness * lower_smoothness + weights.Trapped_penalty * lower_trappedpenalty;
+            double bound = ((WeightVectorAll)weights).Corner * lower_corner + ((WeightVectorAll)weights).Empty_cells * lower_emptycells 
+                + ((WeightVectorAll)weights).Highest_tile * lower_highestvalue + ((WeightVectorAll)weights).Monotonicity * lower_monotonicity
+                + ((WeightVectorAll)weights).Points * lower_points + ((WeightVectorAll)weights).Smoothness * lower_smoothness
+                + ((WeightVectorAll)weights).Snake * lower_snake + ((WeightVectorAll)weights).Trapped_penalty * lower_trappedpenalty;
             return bound - 10;
         }
 
-        // for Expectimax Star1 pruning
-        internal static double GetUpperBound()
-        {
-            return 0;
-        }
-
-        // for Expectimax Star1 pruning
-        internal static double GetLowerBound()
-        {
-            return 0;
-        }
-
+        // Evaluation function
         public static double EvaluateWithWeights(State state, WeightVector weights)
         {
             if (state.IsGameOver()) return GetLowerBound(weights) - 10;
             else
             {
-                double emptycells = EmptyCells(state);
-                double highestvalue = HighestValue(state);
-                double monotonicity = Monotonicity(state);
-                double points = Points(state);
-                double smoothness = Smoothness(state);
-                double trappedpenalty = TrappedPenalty(state);
+                double corner = 0, emptycells = 0, highestvalue = 0, monotonicity = 0, points = 0, smoothness = 0, snake = 0, trappedpenalty = 0;
+                // Only do the heuristic calculation if the weight is not 0 (avoid unnescessary work)
+                if(((WeightVectorAll)weights).Corner != 0) corner = Corner(state);
+                if(((WeightVectorAll)weights).Empty_cells != 0) emptycells = EmptyCells(state);
+                if(((WeightVectorAll)weights).Highest_tile != 0) highestvalue = HighestValue(state);
+                if(((WeightVectorAll)weights).Monotonicity != 0) monotonicity = Monotonicity(state);
+                if(((WeightVectorAll)weights).Points != 0) points = Points(state);
+                if(((WeightVectorAll)weights).Smoothness != 0) smoothness = Smoothness(state);
+                if(((WeightVectorAll)weights).Snake != 0) snake = WeightSnake(state);
+                if(((WeightVectorAll)weights).Trapped_penalty != 0) trappedpenalty = TrappedPenalty(state);
 
-                double eval = weights.Empty_cells * emptycells + weights.Highest_tile * highestvalue + weights.Monotonicity * monotonicity + weights.Points * points + weights.Smoothness * smoothness - weights.Trapped_penalty * trappedpenalty;
+                // evaluation function is a linear combination of heuristic values and their weights
+                double eval = ((WeightVectorAll)weights).Corner * corner + ((WeightVectorAll)weights).Empty_cells * emptycells + ((WeightVectorAll)weights).Highest_tile * highestvalue
+                    + ((WeightVectorAll)weights).Monotonicity * monotonicity + ((WeightVectorAll)weights).Points * points + ((WeightVectorAll)weights).Smoothness * smoothness
+                    + ((WeightVectorAll)weights).Snake * snake - ((WeightVectorAll)weights).Trapped_penalty * trappedpenalty;
 
                 if (state.IsWin())
                 {
@@ -85,27 +82,19 @@ namespace _2048console
             }
         }
 
-        public static double Evaluate(GameEngine gameEngine, State state)
+        // Simple evaluation function only using Snake heuristic
+        public static double Evaluate(State state)
         {
             if (state.IsGameOver())
             {
                 return -1000;
-                //return GetLowerBound();
             }
             else
             {
-                double eval = 0;
-
-                //double smoothness = Smoothness(state);
-                //double monotonicity = Monotonicity(state);
-                //double emptycells = EmptyCells(state);
-                //double highestvalue = HighestValue(state);
-                //double trappedpenalty = TrappedPenalty(state);
-                //eval = smoothness_weight * smoothness + monotonicity_weight * monotonicity + emptycells_weight * emptycells + highestvalue_weight * highestvalue -trappedpenalty_weight * trappedpenalty;
-                eval = Smoothness(state);
+                double eval = WeightSnake(state);
 
                 if (state.IsWin())
-                    return 1000 + eval;
+                    return eval + 1000;
                 else
                 {
                     return eval;
@@ -113,6 +102,9 @@ namespace _2048console
             }
         }
 
+        // Heuristic to be meant as a penalty in the evaluation function
+        // Returns the number of trapped tiles in the given states
+        // A tile is trapped if it is only surrounded by walls and/or higher tiles
         public static double TrappedPenalty(State state)
         {
             double trapped = 0;
@@ -151,14 +143,12 @@ namespace _2048console
         }
 
         // The highest value on the board (in log2)
-        // range: {1, 17}
         public static double HighestValue(State state)
         {
             return Math.Log(BoardHelper.HighestTile(state.Board)) / Math.Log(2);
         }
 
         // returns the number of empty cells on the board
-        // ranging between 0 and 16
         public static double EmptyCells(State state)
         {
             int emptyCells = 0;
@@ -184,9 +174,6 @@ namespace _2048console
 
         // This heuristic measures the "smoothness" of the board
         // It does so by measuring the difference between neighbouring tiles (the log2 difference) and summing these
-        //
-        // The range of this heuristic is: {-384, 0}
-        
         public static double Smoothness(State state)
         {
             double smoothness = 0;
@@ -219,7 +206,8 @@ namespace _2048console
             return -smoothness;
         }
 
-
+        // Helper method for Smoothness heuristic
+        // Finds the cell containing the nearest tile in a given direction from another cell
         public static Cell FindNearestTile(Cell from, DIRECTION dir, int[][] board)
         {
             int x = from.x, y = from.y;
@@ -257,7 +245,6 @@ namespace _2048console
             }
             return new Cell(x, y);
         }
-
 
         // Helper method to get a list of neighbours to a specific cell
         private static List<Tuple<int, int>> GetNeighbours(State state, int i, int j)
@@ -326,9 +313,10 @@ namespace _2048console
             }
             return neighbours;
         }
-
  
-        // Arranges tiles up against a corner
+        // Heuristic function that scores a state according how the tiles
+        // are arranged in the corner and up against edges of the board
+        // Higher tiles in corners returns largest scores
         public static double Corner(State state)
         {
             double[][] corner1 = new double[][] {
@@ -397,11 +385,8 @@ namespace _2048console
             weightMatrices.Add(corner7);
             weightMatrices.Add(corner8);
 
-            return MaxProductMatrix(state.Board, weightMatrices);
+            return Math.Log(MaxProductMatrix(state.Board, weightMatrices))/Math.Log(2);
         }
-
-
-
 
         // Arranges the tiles in a "snake"
         // As there are 8 different ways the tiles can be arranged in a "snake" on the board, this method
@@ -475,11 +460,11 @@ namespace _2048console
             weightMatrices.Add(snake7);
             weightMatrices.Add(snake8);
 
-            return MaxProductMatrix(state.Board, weightMatrices);
+            return Math.Log(MaxProductMatrix(state.Board, weightMatrices))/Math.Log(2);
         }
 
 
-        // Helper method for the WeightSnake heuristic - finds the weight matrix that gives the greatest
+        // Helper method for the Snake and Corner heuristic - finds the weight matrix that gives the greatest
         // sum when multiplied with the board and summed up, returns this sum
         private static double MaxProductMatrix(int[][] board, List<double[][]> weightMatrices)
         {
@@ -501,8 +486,10 @@ namespace _2048console
             return sums.Max();
         }
 
+
         // returns the number of possible merges of tiles on the board
         // ranging between 0 and 24 (24 is when every square is occupied by a tile of the same value)
+        // NB: NOT USED
         public static int Mergeability(State state)
         {
             int mergePoints = 0;
@@ -559,8 +546,6 @@ namespace _2048console
         // returns a score ranking a state according to how the tiles are increasing/decreasing in all directions
         // increasing/decreasing in the same directions (for example generally increasing in up and right direction) will return higher score 
         // than a state increasing in one row and decreasing in another row
-
-        // range: {-192, 0}
         public static double Monotonicity(State state)
         {
             double left = 0;

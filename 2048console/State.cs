@@ -74,6 +74,11 @@ namespace _2048console
              random = new Random();
         }
 
+        public State()
+        {
+            // TODO: Complete member initialization
+        }
+
         // Returns a clone of the state
         public State Clone()
         {
@@ -102,8 +107,13 @@ namespace _2048console
             else
             {
                 List<Move> moves = GetMoves();
-                int randomIndex = random.Next(0, moves.Count);
-                return moves[randomIndex];
+                if (moves.Count != 0)
+                {
+                    int randomIndex = random.Next(0, moves.Count);
+                    return moves[randomIndex];
+                }
+                else return null;
+                
             }
         }
 

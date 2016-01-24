@@ -5,7 +5,7 @@ using System.Text;
 
 namespace _2048console
 {
-    // class representation of a cell on the board
+    // Class representation of a cell on the board
     public class Cell
     {
         public int x {get; set; }
